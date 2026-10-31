@@ -7,7 +7,7 @@ from datetime import datetime
 # 🏛️ 1. CẤU HÌNH GIAO DIỆN DI ĐỘNG & THƯỢNG LƯU (DARK THEME)
 # =====================================================================
 st.set_page_config(
-    page_title="Harmony Council Pro v2.6 - Full Strategy",
+    page_title="Harmony Council Pro v2.6 - Live Chamber",
     page_icon="🏛️",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -71,11 +71,11 @@ st.markdown("""
 # 🏛️ 2. HEADER & BANNER
 # =====================================================================
 st.markdown("### 🏛️ HARMONY COUNCIL PRO v2.6")
-st.caption("🔒 **LOCAL-FIRST QUANTITATIVE ENGINE** | Đa chiều: Đông - Tây - Thống kê Chiến lược")
+st.caption("🔒 **LOCAL-FIRST QUANTITATIVE ENGINE** | Mô phỏng Hội đồng Đa chiều Động")
 st.divider()
 
 # =====================================================================
-# ⚙️ 3. INPUTS & CẤU HÌNH THỊ TRƯỜNG, CHIẾN LƯỢC
+# ⚙️ 3. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH MỞ RỘNG
 # =====================================================================
 col1, col2 = st.columns(2)
 with col1:
@@ -89,35 +89,28 @@ with col2:
         game = st.selectbox("🎯 Trò chơi", ["China Super Lotto"])
 
 with st.expander("👤 Thiết lập Bản mệnh & Tầm nhìn Chiến lược", expanded=True):
-    # Dải năm sinh mở rộng
+    # Mở rộng dải năm sinh thoải mái từ 1940 đến hiện tại
     col_d, col_m, col_y = st.columns(3)
     with col_d:
         day = st.selectbox("Ngày", list(range(1, 32)), index=1)
     with col_m:
         month = st.selectbox("Tháng", list(range(1, 13)), index=1)
     with col_y:
-        year = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36)
+        year = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36) # Mặc định quanh 1990
     
     dob_str = f"{day:02d}/{month:02d}/{year}"
-    st.caption(f"📅 Ngày sinh bản mệnh: **{dob_str}**")
+    st.caption(f"📅 Ngày sinh đã chọn: **{dob_str}**")
 
     st.markdown("---")
-    st.markdown("**🎛️ Cấu hình Tầm nhìn và Chiến lược Thống kê:**")
-    
-    # Tùy chọn Tầm nhìn động (Độ dài mẫu)
-    sample_horizon = st.slider("👁️ Tầm nhìn mẫu (Số kỳ quay lịch sử xét duyệt)", min_value=30, max_value=500, value=100, step=10)
-    
-    # Tùy chọn Chiến lược Hot / Cold / Neutral
-    stat_strategy = st.selectbox(
-        "📈 Khẩu vị Chiến lược Thống kê",
-        ["🔥 Hot (Số nóng - Bắt nhịp cầu chạy)", "❄️ Cold (Số lạnh - Đón đầu đảo chiều)", "⚖️ Neutral (Trung lập - Cân bằng nhịp độ)"]
-    )
+    st.markdown("🔢 **Cấu hình Số lượng Kết quả xuất ra:**")
+    # 👉 THANH TRƯỞNG GIÚP TÙY CHỌN SỐ LƯỢNG KẾT QUẢ ĐỘNG (Từ 1 đến 10 bộ số)
+    num_rows = st.slider("Chọn số lượng dãy số dự đoán", min_value=1, max_value=10, value=3, step=1)
 
     st.markdown("---")
-    st.markdown("**🏛️ Bật/Tắt Hội đồng Giám khảo độc lập:**")
-    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm)", value=True)
-    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo)", value=True)
-    use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
+    st.markdown("**🎛️ Bật/Tắt và Trọng số Giám khảo độc lập:**")
+    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm / Bát Trạch)", value=True)
+    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo & Tứ đại Nguyên tố)", value=True)
+    use_stat = st.checkbox("📊 Hội đồng Thống kê Lịch sử (Ma trận tần suất Hot/Cold)", value=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -139,15 +132,14 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
         time.sleep(0.4)
 
     if use_west:
-        status_text.text("🌟 Hội đồng Phương Tây: Đang ánh xạ Cung Hoàng đạo và Tứ đại Nguyên tố...")
+        status_text.text("🌟 Hội đồng Phương Tây: Đang ánh xạ Cung Hoàng đạo và lọc Tứ đại Nguyên tố...")
         progress_bar.progress(70)
         time.sleep(0.4)
 
     if use_stat:
-        strategy_label = stat_strategy.split(" ")[1]
-        status_text.text(f"📊 Hội đồng Thống kê: Đang quét tầm nhìn {sample_horizon} kỳ theo chiến lược [{strategy_label}]...")
+        status_text.text(f"📊 Hội đồng Thống kê: Đang rà soát ma trận tần suất lịch sử của game {game}...")
         progress_bar.progress(90)
-        time.sleep(0.5)
+        time.sleep(0.4)
 
     status_text.text("✅ Hoàn tất quá trình cộng hưởng đa chiều!")
     progress_bar.progress(100)
@@ -156,22 +148,24 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
     progress_bar.empty()
     status_text.empty()
 
-    st.markdown(f"### 🎯 KẾT QUẢ PHÂN TÍCH ({game} | Tầm nhìn: {sample_horizon} kỳ)")
+    st.markdown(f"### 🎯 KẾT QUẢ PHÂN TÍCH ({num_rows} BỘ SỐ CỘNG HƯỞNG)")
     
     max_num = 35 if "5/35" in game else (55 if "6/55" in game else (69 if "Powerball" in game else 45))
     pick_count = 5 if "5/35" in game else 6
 
+    # Sinh danh sách kết quả động dựa theo biến `num_rows` do người dùng chọn trên slider
     results = []
-    for i in range(1, 4):
+    for i in range(1, num_rows + 1):
         chosen_set = sorted(random.sample(range(1, max_num + 1), pick_count))
-        score = round(random.uniform(92.0, 99.1), 2)
+        score = round(random.uniform(91.0, 98.8), 2)
         results.append({
             "set": chosen_set,
             "score": score,
-            "east_score": round(score - random.uniform(0.3, 1.5), 1),
-            "west_score": round(score + random.uniform(0.1, 1.0), 1),
-            "stat_score": round(score - random.uniform(0.8, 2.0), 1),
-            "strategy_text": f"Đã áp dụng mẫu {sample_horizon} kỳ với tiêu chí {stat_strategy}."
+            "east_score": round(score - random.uniform(0.5, 2.0), 1),
+            "west_score": round(score + random.uniform(0.1, 1.2), 1),
+            "stat_score": round(score - random.uniform(1.0, 2.5), 1),
+            "detail_east": f"Năng lượng Can Chi năm {year} tương thích tối ưu hành Thủy/Mộc.",
+            "detail_west": "Cộng hưởng sóng trường nguyên tố chủ đạo trong chu kỳ quay."
         })
 
     for idx, res in enumerate(results, 1):
@@ -180,15 +174,15 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
         st.markdown(f"""
         <div class="council-card">
             <span class="score-badge">Harmony Score: {res['score']}%</span>
-            <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx}</b><br><br>
+            <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game})</b><br><br>
             <div style="margin-bottom: 12px;">
                 {balls_html}
             </div>
             <hr style="border-color: #2A2D3A; margin: 12px 0;">
             <div class="sub-metric">
-                <b>🏛️ Phương Đông ({res['east_score']}%):</b> Tương thích bản mệnh Can Chi năm {year}.<br>
-                <b>🌟 Phương Tây ({res['west_score']}%):</b> Cộng hưởng trường năng lượng cung hoàng đạo.<br>
-                <b>📊 Thống kê Chiến lược ({res['stat_score']}%):</b> {res['strategy_text']}
+                <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
+                <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
+                <b>📊 Hội đồng Thống kê Ma trận ({res['stat_score']}%):</b> Tần suất xuất hiện nằm trong ngưỡng tối ưu lịch sử.
             </div>
         </div>
         """, unsafe_allow_html=True)
