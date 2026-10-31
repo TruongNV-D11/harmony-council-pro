@@ -64,6 +64,15 @@ st.markdown("""
         margin-top: 8px;
         line-height: 1.5;
     }
+    .watermark-box {
+        text-align: center;
+        padding: 15px;
+        background: rgba(26, 28, 35, 0.7);
+        border-radius: 10px;
+        border: 1px dashed #1D976C;
+        margin-top: 25px;
+        margin-bottom: 15px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -75,7 +84,15 @@ st.caption("🔒 **LOCAL-FIRST QUANTITATIVE ENGINE** | Mô phỏng Hội đồng
 st.divider()
 
 # =====================================================================
-# ⚙️ 3. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH & CHIẾN LƯỢC
+# 🎵 3. TRÌNH PHÁT NHẠC NỀN / ÂM THANH KHỞI TẠO (BACKGROUND AUDIO)
+# =====================================================================
+with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=False):
+    st.caption("Kích hoạt âm thanh nền tần số Alpha giúp tăng tập trung khi phân tích chiến lược:")
+    # Tích hợp âm thanh mẫu trực tuyến nhẹ nhàng (hoặc nhạc nền tùy chọn)
+    st.audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf756.mp3?filename=lofi-study-112191.mp3", format="audio/mp3")
+
+# =====================================================================
+# ⚙️ 4. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH & CHIẾN LƯỢC
 # =====================================================================
 col1, col2 = st.columns(2)
 with col1:
@@ -102,11 +119,8 @@ with st.expander("👤 Thiết lập Bản mệnh & Tầm nhìn Chiến lược"
 
     st.markdown("---")
     st.markdown("📊 **Cấu hình Tầm nhìn & Khẩu vị Thống kê:**")
-    
-    # 👉 TẦM NHÌN MẪU (SỐ KỲ QUAY LỊCH SỬ XÉT DUYỆT)
     horizon_samples = st.slider("🔍 Tầm nhìn mẫu (Số kỳ quay lịch sử xét duyệt)", min_value=20, max_value=500, value=100, step=10)
     
-    # 👉 KHẨU VỊ CHIẾN LƯỢC THỐNG KÊ (HOT / NEUTRAL / COLD)
     hc_strategy = st.radio(
         "🎯 Khẩu vị Chiến lược Thống kê",
         options=["🔥 Hot (Số nóng - Bắt nhịp cầu chạy)", "⚖️ Neutral (Trung lập - Cân bằng nhịp)", "❄️ Cold (Số lạnh - Đón đầu đảo chiều)"],
@@ -126,7 +140,7 @@ with st.expander("👤 Thiết lập Bản mệnh & Tầm nhìn Chiến lược"
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =====================================================================
-# 🚀 4. KÍCH HOẠT HỘI ĐỒNG VỚI HIỆU ỨNG TIẾN TRÌNH ĐỘNG
+# 🚀 5. KÍCH HOẠT HỘI ĐỒNG VỚI HIỆU ỨNG TIẾN TRÌNH ĐỘNG
 # =====================================================================
 if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
     
@@ -200,4 +214,14 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
         """, unsafe_allow_html=True)
 
 st.divider()
-st.caption("🛡️ Bản quyền thuộc về Harmony Council Engine. Xử lý toàn bộ cục bộ trên thiết bị (Local-first).")
+
+# =====================================================================
+# 🛡️ 6. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
+# =====================================================================
+st.markdown("""
+    <div class="watermark-box">
+        <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
+        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
+        <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Local-First • Bảo mật tuyệt đối</p>
+    </div>
+""", unsafe_allow_html=True)
