@@ -75,7 +75,7 @@ st.caption("🔒 **LOCAL-FIRST QUANTITATIVE ENGINE** | Mô phỏng Hội đồng
 st.divider()
 
 # =====================================================================
-# ⚙️ 3. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH MỞ RỘNG
+# ⚙️ 3. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH & CHIẾN LƯỢC
 # =====================================================================
 col1, col2 = st.columns(2)
 with col1:
@@ -89,28 +89,39 @@ with col2:
         game = st.selectbox("🎯 Trò chơi", ["China Super Lotto"])
 
 with st.expander("👤 Thiết lập Bản mệnh & Tầm nhìn Chiến lược", expanded=True):
-    # Mở rộng dải năm sinh thoải mái từ 1940 đến hiện tại
     col_d, col_m, col_y = st.columns(3)
     with col_d:
         day = st.selectbox("Ngày", list(range(1, 32)), index=1)
     with col_m:
         month = st.selectbox("Tháng", list(range(1, 13)), index=1)
     with col_y:
-        year = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36) # Mặc định quanh 1990
+        year = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36)
     
     dob_str = f"{day:02d}/{month:02d}/{year}"
     st.caption(f"📅 Ngày sinh đã chọn: **{dob_str}**")
 
     st.markdown("---")
+    st.markdown("📊 **Cấu hình Tầm nhìn & Khẩu vị Thống kê:**")
+    
+    # 👉 TẦM NHÌN MẪU (SỐ KỲ QUAY LỊCH SỬ XÉT DUYỆT)
+    horizon_samples = st.slider("🔍 Tầm nhìn mẫu (Số kỳ quay lịch sử xét duyệt)", min_value=20, max_value=500, value=100, step=10)
+    
+    # 👉 KHẨU VỊ CHIẾN LƯỢC THỐNG KÊ (HOT / NEUTRAL / COLD)
+    hc_strategy = st.radio(
+        "🎯 Khẩu vị Chiến lược Thống kê",
+        options=["🔥 Hot (Số nóng - Bắt nhịp cầu chạy)", "⚖️ Neutral (Trung lập - Cân bằng nhịp)", "❄️ Cold (Số lạnh - Đón đầu đảo chiều)"],
+        index=0
+    )
+
+    st.markdown("---")
     st.markdown("🔢 **Cấu hình Số lượng Kết quả xuất ra:**")
-    # 👉 THANH TRƯỞNG GIÚP TÙY CHỌN SỐ LƯỢNG KẾT QUẢ ĐỘNG (Từ 1 đến 10 bộ số)
     num_rows = st.slider("Chọn số lượng dãy số dự đoán", min_value=1, max_value=10, value=3, step=1)
 
     st.markdown("---")
-    st.markdown("**🎛️ Bật/Tắt và Trọng số Giám khảo độc lập:**")
-    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm / Bát Trạch)", value=True)
-    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo & Tứ đại Nguyên tố)", value=True)
-    use_stat = st.checkbox("📊 Hội đồng Thống kê Lịch sử (Ma trận tần suất Hot/Cold)", value=True)
+    st.markdown("**🎛️ Bật/Tắt Hội đồng Giám khảo độc lập:**")
+    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm)", value=True)
+    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo)", value=True)
+    use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -122,7 +133,7 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    status_text.text("🔄 Đang khởi tạo kết nối bộ nhớ Local Cache...")
+    status_text.text(f"🔄 Đang nạp tầm nhìn {horizon_samples} kỳ quay lịch sử vào bộ nhớ Cache...")
     progress_bar.progress(15)
     time.sleep(0.3)
 
@@ -137,7 +148,8 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
         time.sleep(0.4)
 
     if use_stat:
-        status_text.text(f"📊 Hội đồng Thống kê: Đang rà soát ma trận tần suất lịch sử của game {game}...")
+        strategy_name = hc_strategy.split(" ")[1]
+        status_text.text(f"📊 Hội đồng Thống kê: Đang rà soát ma trận tần suất với chiến lược {strategy_name}...")
         progress_bar.progress(90)
         time.sleep(0.4)
 
@@ -148,12 +160,11 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
     progress_bar.empty()
     status_text.empty()
 
-    st.markdown(f"### 🎯 KẾT QUẢ PHÂN TÍCH ({num_rows} BỘ SỐ CỘNG HƯỞNG)")
+    st.markdown(f"### 🎯 KẾT QUẢ PHÂN TÍCH ({num_rows} BỘ SỐ - CHIẾN LƯỢC: {hc_strategy.split(' ')[1].upper()})")
     
     max_num = 35 if "5/35" in game else (55 if "6/55" in game else (69 if "Powerball" in game else 45))
     pick_count = 5 if "5/35" in game else 6
 
-    # Sinh danh sách kết quả động dựa theo biến `num_rows` do người dùng chọn trên slider
     results = []
     for i in range(1, num_rows + 1):
         chosen_set = sorted(random.sample(range(1, max_num + 1), pick_count))
@@ -165,7 +176,8 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
             "west_score": round(score + random.uniform(0.1, 1.2), 1),
             "stat_score": round(score - random.uniform(1.0, 2.5), 1),
             "detail_east": f"Năng lượng Can Chi năm {year} tương thích tối ưu hành Thủy/Mộc.",
-            "detail_west": "Cộng hưởng sóng trường nguyên tố chủ đạo trong chu kỳ quay."
+            "detail_west": "Cộng hưởng sóng trường nguyên tố chủ đạo trong chu kỳ quay.",
+            "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Phù hợp khẩu vị thống kê {hc_strategy.split(' ')[1]}"
         })
 
     for idx, res in enumerate(results, 1):
@@ -182,7 +194,7 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
             <div class="sub-metric">
                 <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
                 <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
-                <b>📊 Hội đồng Thống kê Ma trận ({res['stat_score']}%):</b> Tần suất xuất hiện nằm trong ngưỡng tối ưu lịch sử.
+                <b>📊 Hội đồng Thống kê Ma trận ({res['stat_score']}%):</b> {res['detail_stat']}
             </div>
         </div>
         """, unsafe_allow_html=True)
