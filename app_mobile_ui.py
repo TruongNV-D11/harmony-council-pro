@@ -521,4 +521,21 @@ for idx, res in enumerate(results, 1):
         <hr style="border-color: #2A2D3A; margin: 12px 0;">
         <div class="sub-metric">
             <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
-            <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b>
+            <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
+            <b>📊 Hội đồng Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.divider()
+
+# =====================================================================
+# 🛡️ 8. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
+# =====================================================================
+st.markdown("""
+    <div class="watermark-box">
+        <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
+        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV</b></p>
+        <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Academic Profile Active</p>
+    </div>
+""", unsafe_allow_html=True)
