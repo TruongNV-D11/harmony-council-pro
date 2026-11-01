@@ -341,7 +341,7 @@ st.divider()
 # =====================================================================
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=False):
     st.caption("Kích hoạt âm thanh nền từ kho Vietlott-MP3-File của bạn:")
-    st.audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf756.mp3?filename=lofi-study-112191.mp3", format="audio/mp3")
+    st.audio("https://github.com/TruongNV-D11/Vietlott-Audio.git", format="audio/mp3")
 
 # =====================================================================
 # ⚙️ 6. INPUTS & CẤU HÌNH THỊ TRƯỜNG, KỲ QUAY REAL-TIME & CHIẾN LƯỢC
