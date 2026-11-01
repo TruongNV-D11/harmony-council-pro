@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple, Any
 # 🏛️ 1. CẤU HÌNH GIAO DIỆN DI ĐỘNG & THƯỢNG LƯU (DARK THEME)
 # =====================================================================
 st.set_page_config(
-    page_title="Vietlott Harmony Pro v2.6 - Live Chamber",
+    page_title="Harmony Council Pro v2.6 - Live Chamber",
     page_icon="🏛️",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -348,16 +348,15 @@ class FlexibleCouncilEvaluator:
 
 
 # =====================================================================
-# 🏛️ 4. HEADER & BANNER (CÓ TRÍCH YẾU HỌC THUẬT)
+# 🏛️ 4. HEADER & BANNER (TRÍCH YẾU HỌC THUẬT)
 # =====================================================================
-st.markdown("### 🏛️ VIETLOTT HARMONY PRO v2.6")
-st.caption("🔒 **REAL-TIME SMART CACHED ENGINE** ")
+st.markdown("### 🏛️ HARMONY COUNCIL PRO v2.6")
+st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Bảng Lịch Tết Nguyên Bản & Trạng thái Live")
 
-# 👉 Bổ sung Trích yếu Học thuật ứng dụng trong App
 st.markdown("""
 <div class="academic-banner">
     <b>📜 TRÍCH YẾU HỌC THUẬT ỨNG DỤNG:</b><br>
-    • <b>Phương Đông:</b> Can Chi, Nạp Âm 60 Hoa Giáp & Cung Mệnh Bát Trạch.<br>
+    • <b>Phương Đông:</b> Lịch Tết Âm lịch chuẩn (1924–2100), Can Chi, Nạp Âm 60 Hoa Giáp & Cung Mệnh Bát Trạch.<br>
     • <b>Phương Tây:</b> Chiêm tinh học, 12 Cung Hoàng đạo & Tứ đại Nguyên tố (Hỏa, Thổ, Khí, Thủy).<br>
     • <b>Thống kê:</b> Ma trận tần suất lịch sử đa chiều (Chiến lược Hot / Neutral / Cold động).
 </div>
@@ -366,11 +365,34 @@ st.markdown("""
 st.divider()
 
 # =====================================================================
-# 🎵 5. TRÌNH PHÁT NHẠC NỀN CHUẨN KHO GITHUB (VIETLOTT-MP3-FILE)
+# 🎵 5. TRÌNH PHÁT NHẠC NỀN TỰ CHẠY (AUTOPLAY / LOOP AUDIO ENGINE)
 # =====================================================================
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=True):
-    st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-MP3-File` của bạn:")
-    st.audio("https://raw.githubusercontent.com/TruongNV-D11/Vietlott-Audio/main/music_bg.mp3", format="audio/mp3")
+    st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-MP3-File` của bạn (Tự động phát):")
+    
+    # Mã HTML5 Audio với thuộc tính autoplay, loop và script hỗ trợ tự phát ngay khi load
+    audio_html = """
+    <audio id="bg-audio" autoplay loop controls style="width: 100%;">
+        <source src="https://raw.githubusercontent.com/TruongNV-D11/Vietlott-MP3-File/main/ambient_alpha.mp3" type="audio/mp3">
+        Trình duyệt của bạn không hỗ trợ thẻ audio.
+    </audio>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            var audio = document.getElementById("bg-audio");
+            if (audio) {
+                audio.volume = 0.5;
+                var playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        // Tự động thử lại khi người dùng tương tác nhẹ với trang web
+                        document.addEventListener('click', () => { audio.play(); }, { once: true });
+                    });
+                }
+            }
+        });
+    </script>
+    """
+    st.components.v1.html(audio_html, height=65)
 
 # =====================================================================
 # ⚙️ 6. INPUTS & CẤU HÌNH THỊ TRƯỜNG, KỲ QUAY REAL-TIME & CHIẾN LƯỢC
@@ -405,7 +427,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
         draw_dt = initial_draw_dt
 
     st.markdown("---")
-    st.markdown("👤 **Ngày sinh Bản mệnh người chơi (Áp dụng Bảng Lịch Tết Nguyên Đán):**")
+    st.markdown("👤 **Ngày sinh Bản mệnh người chơi (Áp dụng Bảng Lịch Tết Nguyên Bản):**")
     col_bd, col_bm, col_by = st.columns(3)
     with col_bd:
         bday = st.selectbox("Ngày sinh", list(range(1, 32)), index=1)
@@ -419,7 +441,6 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
     
     profile = PhongThuyReferenceCore.get_full_info(dob_str, gender, draw_dt)
     
-    # 👉 Bảng 2: Sắp xếp ngay hàng thẳng lối, ngăn nắp, thêm Chiêm Tinh Học sau Cung Hoàng Đạo
     st.markdown(f"""
     <div style="background-color: #1A1C23; border: 1px solid #1D976C; border-radius: 10px; padding: 15px; margin-top: 10px; line-height: 1.8;">
         📅 <b>Bản mệnh:</b> {profile['can']} {profile['chi']} — <b>{profile['menh']}</b><br>
@@ -445,108 +466,138 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
 
     st.markdown("---")
     st.markdown("**🎛️ Bật/Tắt Hội đồng Giám khảo độc lập:**")
-    # 👉 Bảng 1: Thêm Chiêm tinh học vào sau Cung Hoàng đạo
-    use_east = st.checkbox("🏛️ Huyền học Phương Đông (Can Chi / Nạp Âm)", value=True)
-    use_west = st.checkbox("🌟 Huyền học Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
-    use_stat = st.checkbox("📊 Thuật toán Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
+    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm)", value=True)
+    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
+    use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =====================================================================
-# 🚀 7. CHẠY THỰC THI THỜI GIAN THỰC & HIỂN THỊ TRẠNG THÁI CACHE
+# 🚀 7. NÚT CHẠY CHƯƠNG TRÌNH & HIỆU ỨNG DELAY / CHẠY CHỮ (ANIMATION)
 # =====================================================================
-st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH THỰC CHIẾN ({num_rows} BỘ SỐ - {game_cfg['label']})")
+run_clicked = st.button("🚀 Khởi động Hội đồng Chấm điểm (Chạy Chương Trình)")
 
-history_data, data_source_status, cache_age_sec = get_history(game_key, sample_k=horizon_samples, force_refresh=False)
+if run_clicked:
+    progress_bar = st.progress(0)
+    status_text = st.empty()
 
-age_min = round(cache_age_sec / 60, 1)
-st.success(
-    f"🌐 **Trạng thái Data:** {data_source_status} | "
-    f"⏱️ **Tuổi Cache (Cache Age):** {age_min} phút ({int(cache_age_sec)} giây) | "
-    f"🕒 **Kỳ quay:** {profile['draw_datetime']}"
-)
+    status_text.text("🔄 Đang thiết lập kết nối Real-time & Nạp Smart Cache lịch sử...")
+    progress_bar.progress(25)
+    time.sleep(0.4)
 
-max_main = game_cfg["max_main"]
-pick_count = game_cfg["pick"]
-has_special = game_cfg.get("has_special", False)
-special_max = game_cfg.get("special_max", 12)
+    status_text.text("🏛️ Hội đồng Phương Đông & Phương Tây đang đối chiếu bản mệnh người chơi...")
+    progress_bar.progress(60)
+    time.sleep(0.4)
 
-freq_map = {i: 0 for i in range(1, max_main + 1)}
-for row in history_data:
-    for num in row.get("mains", []):
-        if 1 <= num <= max_main:
-            freq_map[num] += 1
+    status_text.text("📊 Hội đồng Thống kê Ma trận đang chạy khẩu vị Hot/Cold...")
+    progress_bar.progress(90)
+    time.sleep(0.4)
 
-active_councils = []
-if use_east: active_councils.append("eastern")
-if use_west: active_councils.append("western")
-if use_stat: active_councils.append("statistics")
-
-weight_per_council = 1.0 / len(active_councils) if active_councils else 1.0
-
-candidate_scores = []
-for num in range(1, max_main + 1):
-    total_score = 0.0
-    s_east, s_west, s_stat = 0.5, 0.5, 0.5
-
-    if "eastern" in active_councils:
-        s_east = FlexibleCouncilEvaluator.judge_eastern(num, profile["menh_elem"])
-        total_score += s_east * weight_per_council
-    if "western" in active_councils:
-        s_west = FlexibleCouncilEvaluator.judge_western(num, profile["western_sign"])
-        total_score += s_west * weight_per_council
-    if "statistics" in active_councils:
-        s_stat = FlexibleCouncilEvaluator.judge_statistics_hot_cold(num, freq_map, hc_strategy)
-        total_score += s_stat * weight_per_council
-
-    candidate_scores.append((num, total_score, s_east * 100, s_west * 100, s_stat * 100))
-
-candidate_scores.sort(key=lambda x: x[1], reverse=True)
-top_pool = [item[0] for item in candidate_scores[:max(int(max_main * 0.6), pick_count + 5)]]
-
-results = []
-rnd = random.Random()
-for i in range(1, num_rows + 1):
-    if len(top_pool) >= pick_count:
-        chosen = sorted(rnd.sample(top_pool, pick_count))
-    else:
-        chosen = sorted(rnd.sample(range(1, max_main + 1), pick_count))
+    status_text.text("✅ Hoàn tất thẩm định đa chiều!")
+    progress_bar.progress(100)
+    time.sleep(0.3)
     
-    spec_num = rnd.randint(1, special_max) if has_special else None
-    base_score = round(rnd.uniform(91.0, 99.2), 2)
-    
-    results.append({
-        "set": chosen,
-        "special": spec_num,
-        "score": base_score,
-        "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
-        "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
-        "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
-        "detail_east": f"Can Chi {profile['can']} {profile['chi']} & Cung mệnh {profile['cung_menh']} tương thích hành {profile['menh_elem']}.",
-        "detail_west": f"Cộng hưởng sóng Chiêm tinh học & cung hoàng đạo {profile['western_sign']}.",
-        "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
-    })
+    progress_bar.empty()
+    status_text.empty()
 
-for idx, res in enumerate(results, 1):
-    balls_html = "".join([f'<div class="ball-number">{num:02d}</div>' for num in res['set']])
-    if res["special"] is not None:
-        balls_html += f'<div class="ball-special" title="Bóng đặc biệt (1-12)">⚡{res["special"]:02d}</div>'
-    
-    st.markdown(f"""
-    <div class="council-card">
-        <span class="score-badge">Harmony Score: {res['score']}%</span>
-        <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game_cfg['label']})</b><br><br>
-        <div style="margin-bottom: 12px;">
-            {balls_html}
+    st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH THỰC CHIẾN ({num_rows} BỘ SỐ - {game_cfg['label']})")
+
+    history_data, data_source_status, cache_age_sec = get_history(game_key, sample_k=horizon_samples, force_refresh=False)
+
+    age_min = round(cache_age_sec / 60, 1)
+    st.success(
+        f"🌐 **Trạng thái Data:** {data_source_status} | "
+        f"⏱️ **Tuổi Cache (Cache Age):** {age_min} phút ({int(cache_age_sec)} giây) | "
+        f"🕒 **Kỳ quay:** {profile['draw_datetime']}"
+    )
+
+    max_main = game_cfg["max_main"]
+    pick_count = game_cfg["pick"]
+    has_special = game_cfg.get("has_special", False)
+    special_max = game_cfg.get("special_max", 12)
+
+    freq_map = {i: 0 for i in range(1, max_main + 1)}
+    for row in history_data:
+        for num in row.get("mains", []):
+            if 1 <= num <= max_main:
+                freq_map[num] += 1
+
+    active_councils = []
+    if use_east: active_councils.append("eastern")
+    if use_west: active_councils.append("western")
+    if use_stat: active_councils.append("statistics")
+
+    weight_per_council = 1.0 / len(active_councils) if active_councils else 1.0
+
+    candidate_scores = []
+    for num in range(1, max_main + 1):
+        total_score = 0.0
+        s_east, s_west, s_stat = 0.5, 0.5, 0.5
+
+        if "eastern" in active_councils:
+            s_east = FlexibleCouncilEvaluator.judge_eastern(num, profile["menh_elem"])
+            total_score += s_east * weight_per_council
+        if "western" in active_councils:
+            s_west = FlexibleCouncilEvaluator.judge_western(num, profile["western_sign"])
+            total_score += s_west * weight_per_council
+        if "statistics" in active_councils:
+            s_stat = FlexibleCouncilEvaluator.judge_statistics_hot_cold(num, freq_map, hc_strategy)
+            total_score += s_stat * weight_per_council
+
+        candidate_scores.append((num, total_score, s_east * 100, s_west * 100, s_stat * 100))
+
+    candidate_scores.sort(key=lambda x: x[1], reverse=True)
+    top_pool = [item[0] for item in candidate_scores[:max(int(max_main * 0.6), pick_count + 5)]]
+
+    results = []
+    rnd = random.Random()
+    for i in range(1, num_rows + 1):
+        if len(top_pool) >= pick_count:
+            chosen = sorted(rnd.sample(top_pool, pick_count))
+        else:
+            chosen = sorted(rnd.sample(range(1, max_main + 1), pick_count))
+        
+        spec_num = rnd.randint(1, special_max) if has_special else None
+        base_score = round(rnd.uniform(91.0, 99.2), 2)
+        
+        results.append({
+            "set": chosen,
+            "special": spec_num,
+            "score": base_score,
+            "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
+            "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
+            "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
+            "detail_east": f"Can Chi {profile['can']} {profile['chi']} & Cung mệnh {profile['cung_menh']} tương thích hành {profile['menh_elem']}.",
+            "detail_west": f"Cộng hưởng sóng Chiêm tinh học & cung hoàng đạo {profile['western_sign']}.",
+            "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
+        })
+
+    for idx, res in enumerate(results, 1):
+        card_placeholder = st.empty()
+        
+        animated_balls_html = ""
+        for num in res['set']:
+            time.sleep(0.12)
+            animated_balls_html += f'<div class="ball-number">{num:02d}</div>'
+            
+            if res["special"] is not None and num == res['set'][-1]:
+                animated_balls_html += f'<div class="ball-special" title="Bóng đặc biệt (1-12)">⚡{res["special"]:02d}</div>'
+
+        card_placeholder.markdown(f"""
+        <div class="council-card">
+            <span class="score-badge">Harmony Score: {res['score']}%</span>
+            <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game_cfg['label']})</b><br><br>
+            <div style="margin-bottom: 12px;">
+                {animated_balls_html}
+            </div>
+            <hr style="border-color: #2A2D3A; margin: 12px 0;">
+            <div class="sub-metric">
+                <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
+                <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
+                <b>📊 Hội đồng Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
+            </div>
         </div>
-        <hr style="border-color: #2A2D3A; margin: 12px 0;">
-        <div class="sub-metric">
-            <b>🏛️ Huyền Học Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
-            <b>🌟 Huyền Học Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
-            <b>📊 Thuật Toán Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
 st.divider()
 
@@ -556,7 +607,7 @@ st.divider()
 st.markdown("""
     <div class="watermark-box">
         <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
-        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV</b></p>
+        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
         <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Academic Profile Active</p>
     </div>
 """, unsafe_allow_html=True)
