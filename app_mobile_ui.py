@@ -373,7 +373,7 @@ with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambien
     # Mã HTML5 Audio với thuộc tính autoplay, loop và script hỗ trợ tự phát ngay khi load
     audio_html = """
     <audio id="bg-audio" autoplay loop controls style="width: 100%;">
-        <source src="https://raw.githubusercontent.com/TruongNV-D11/Vietlott-MP3-File/main/ambient_alpha.mp3" type="audio/mp3">
+        <source src="https://raw.githubusercontent.com/TruongNV-D11/Vietlott-Audio/main/music_bg.mp3" type="audio/mp3">
         Trình duyệt của bạn không hỗ trợ thẻ audio.
     </audio>
     <script>
@@ -466,9 +466,9 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
 
     st.markdown("---")
     st.markdown("**🎛️ Bật/Tắt Hội đồng Giám khảo độc lập:**")
-    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm)", value=True)
-    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
-    use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
+    use_east = st.checkbox("🏛️ Huyền Học Phương Đông (Can Chi / Nạp Âm)", value=True)
+    use_west = st.checkbox("🌟 Huyền Học Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
+    use_stat = st.checkbox("📊 Thuật Toán Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -592,9 +592,9 @@ if run_clicked:
             </div>
             <hr style="border-color: #2A2D3A; margin: 12px 0;">
             <div class="sub-metric">
-                <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
-                <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
-                <b>📊 Hội đồng Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
+                <b>🏛️ Huyền Học Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
+                <b>🌟 Huyền Học Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
+                <b>📊 Thuật Toán Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -607,7 +607,7 @@ st.divider()
 st.markdown("""
     <div class="watermark-box">
         <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
-        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
+        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV</b></p>
         <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Academic Profile Active</p>
     </div>
 """, unsafe_allow_html=True)
