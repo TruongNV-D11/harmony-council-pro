@@ -541,9 +541,9 @@ for idx, res in enumerate(results, 1):
         </div>
         <hr style="border-color: #2A2D3A; margin: 12px 0;">
         <div class="sub-metric">
-            <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
-            <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
-            <b>📊 Hội đồng Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
+            <b>🏛️ Huyền Học Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
+            <b>🌟 Huyền Học Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
+            <b>📊 Thuật Toán Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
         </div>
     </div>
     """, unsafe_allow_html=True)
