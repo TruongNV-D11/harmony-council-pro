@@ -90,6 +90,16 @@ st.markdown("""
         margin-top: 25px;
         margin-bottom: 15px;
     }
+    .academic-banner {
+        background: rgba(29, 151, 108, 0.1);
+        border: 1px solid #1D976C;
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 13px;
+        color: #A0A5B5;
+        margin-bottom: 15px;
+        line-height: 1.6;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -268,7 +278,6 @@ class PhongThuyReferenceCore:
         menh = cls.NAP_AM_60[idx_60]
         menh_elem = menh.split()[-1].replace("Thuỷ", "Thủy")
         
-        # Cung mệnh Bát Trạch chuẩn theo giới tính & năm âm lịch
         if gender.lower() == "nam":
             cung_menh_map = {0: "Khảm (Thủy)", 1: "Khôn (Thổ)", 2: "Chấn (Mộc)", 3: "Tốn (Mộc)", 4: "Cấn (Thổ)", 5: "Càn (Kim)", 6: "Đoài (Kim)", 7: "Cấn (Thổ)", 8: "Ly (Hỏa)"}
             cung_menh = cung_menh_map.get(l_year % 9, "Khảm (Thủy)")
@@ -339,10 +348,21 @@ class FlexibleCouncilEvaluator:
 
 
 # =====================================================================
-# 🏛️ 4. HEADER & BANNER
+# 🏛️ 4. HEADER & BANNER (CÓ TRÍCH YẾU HỌC THUẬT)
 # =====================================================================
 st.markdown("### 🏛️ HARMONY COUNCIL PRO v2.6")
 st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Bảng Lịch Tết Nguyên Bản & Trạng thái Live")
+
+# 👉 Bổ sung Trích yếu Học thuật ứng dụng trong App
+st.markdown("""
+<div class="academic-banner">
+    <b>📜 TRÍCH YẾU HỌC THUẬT ỨNG DỤNG:</b><br>
+    • <b>Phương Đông:</b> Lịch Tết Âm lịch chuẩn (1924–2100), Can Chi, Nạp Âm 60 Hoa Giáp & Cung Mệnh Bát Trạch.<br>
+    • <b>Phương Tây:</b> Chiêm tinh học, 12 Cung Hoàng đạo & Tứ đại Nguyên tố (Hỏa, Thổ, Khí, Thủy).<br>
+    • <b>Thống kê:</b> Ma trận tần suất lịch sử đa chiều (Chiến lược Hot / Neutral / Cold động).
+</div>
+""", unsafe_allow_html=True)
+
 st.divider()
 
 # =====================================================================
@@ -350,7 +370,6 @@ st.divider()
 # =====================================================================
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=True):
     st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-MP3-File` của bạn:")
-    # Sử dụng link audio chuẩn hỗ trợ phát trực tiếp trên trình duyệt
     st.audio("https://raw.githubusercontent.com/TruongNV-D11/Vietlott-MP3-File/main/ambient_alpha.mp3", format="audio/mp3")
 
 # =====================================================================
@@ -400,12 +419,15 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
     
     profile = PhongThuyReferenceCore.get_full_info(dob_str, gender, draw_dt)
     
-    # Hiển thị chi tiết tầng học thuật: Can Chi, Mệnh, Cung Mệnh Bát Trạch & Cung Hoàng Đạo
-    st.info(
-        f"📅 **Bản mệnh:** {profile['can']} {profile['chi']} — **{profile['menh']}**\n\n"
-        f"🏛️ **Cung Mệnh (Bát Trạch):** {profile['cung_menh']} | 🌟 **Cung Hoàng Đạo:** {profile['western_sign']}\n\n"
-        f"⚡ **Hành ngày quay:** {profile['draw_elem']}"
-    )
+    # 👉 Bảng 2: Sắp xếp ngay hàng thẳng lối, ngăn nắp, thêm Chiêm Tinh Học sau Cung Hoàng Đạo
+    st.markdown(f"""
+    <div style="background-color: #1A1C23; border: 1px solid #1D976C; border-radius: 10px; padding: 15px; margin-top: 10px; line-height: 1.8;">
+        📅 <b>Bản mệnh:</b> {profile['can']} {profile['chi']} — <b>{profile['menh']}</b><br>
+        🏛️ <b>Cung Mệnh (Bát Trạch):</b> {profile['cung_menh']}<br>
+        🌟 <b>Cung Hoàng Đạo:</b> {profile['western_sign']} &nbsp;|&nbsp; 🔮 <b>Chiêm Tinh Học:</b> Tứ đại Nguyên tố cộng hưởng<br>
+        ⚡ <b>Hành ngày quay:</b> {profile['draw_elem']}
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("📊 **Cấu hình Tầm nhìn Lịch sử & Khẩu vị Thống kê:**")
@@ -423,8 +445,9 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
 
     st.markdown("---")
     st.markdown("**🎛️ Bật/Tắt Hội đồng Giám khảo độc lập:**")
+    # 👉 Bảng 1: Thêm Chiêm tinh học vào sau Cung Hoàng đạo
     use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm)", value=True)
-    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo)", value=True)
+    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
     use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -434,10 +457,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 # =====================================================================
 st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH THỰC CHIẾN ({num_rows} BỘ SỐ - {game_cfg['label']})")
 
-# Lấy dữ liệu và đo lường tuổi cache (Cache Age)
 history_data, data_source_status, cache_age_sec = get_history(game_key, sample_k=horizon_samples, force_refresh=False)
 
-# Hiển thị tường minh Trạng thái Data & Tuổi Cache trực quan
 age_min = round(cache_age_sec / 60, 1)
 st.success(
     f"🌐 **Trạng thái Data:** {data_source_status} | "
@@ -502,7 +523,7 @@ for i in range(1, num_rows + 1):
         "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
         "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
         "detail_east": f"Can Chi {profile['can']} {profile['chi']} & Cung mệnh {profile['cung_menh']} tương thích hành {profile['menh_elem']}.",
-        "detail_west": f"Cộng hưởng sóng nguyên tố cung hoàng đạo {profile['western_sign']}.",
+        "detail_west": f"Cộng hưởng sóng Chiêm tinh học & cung hoàng đạo {profile['western_sign']}.",
         "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
     })
 
