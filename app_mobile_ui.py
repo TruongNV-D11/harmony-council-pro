@@ -368,26 +368,22 @@ st.divider()
 # 🎵 5. TRÌNH PHÁT NHẠC NỀN TỰ CHẠY (VIETLOTT-AUDIO / MUSIC_BG.MP3)
 # =====================================================================
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=True):
-    st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-Audio` của bạn (Tự động phát):")
+    st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-Audio` của bạn (Tự động phát khi tương tác):")
     
+    # Mã HTML5 Audio với thuộc tính autoplay kết hợp JavaScript kích hoạt tự phát
     audio_html = """
     <audio id="bg-audio" autoplay loop controls style="width: 100%;">
         <source src="https://raw.githubusercontent.com/TruongNV-D11/Vietlott-Audio/main/music_bg.mp3" type="audio/mp3">
         Trình duyệt của bạn không hỗ trợ thẻ audio.
     </audio>
     <script>
-        document.addEventListener('DOMContentLoaded', (event) => {
-            var audio = document.getElementById("bg-audio");
-            if (audio) {
-                audio.volume = 0.5;
-                var playPromise = audio.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        document.addEventListener('click', () => { audio.play(); }, { once: true });
-                    });
-                }
-            }
-        });
+        var audio = document.getElementById("bg-audio");
+        if (audio) {
+            audio.volume = 0.5;
+            audio.play().catch(function(error) {
+                console.log("Autoplay bị trình duyệt chặn, sẽ tự phát ngay khi có tương tác đầu tiên.");
+            });
+        }
     </script>
     """
     st.components.v1.html(audio_html, height=65)
@@ -471,11 +467,22 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =====================================================================
-# 🚀 7. NÚT CHẠY CHƯƠNG TRÌNH & HIỆU ỨNG DELAY TĂNG CƯỜNG (CHẠY SỐ TỪNG CON & TỪNG DÃY)
+# 🚀 7. NÚT CHẠY CHƯƠNG TRÌNH & KÍCH HOẠT AUTOPLAY NHẠC NỀN
 # =====================================================================
+# Tích hợp thêm JavaScript tự động kích hoạt phát nhạc ngay khi người dùng bấm nút chạy chương trình
 run_clicked = st.button("🚀 Khởi động Hội đồng Chấm điểm (Chạy Chương Trình)")
 
 if run_clicked:
+    # Đoạn script nhỏ giúp ép trình duyệt phát nhạc ngay khi click nút Chạy
+    st.components.v1.html("""
+    <script>
+        var audio = window.parent.document.getElementById("bg-audio");
+        if (audio) {
+            audio.play().catch(e => console.log("Phát nhạc qua sự kiện bấm nút."));
+        }
+    </script>
+    """, height=0)
+
     progress_bar = st.progress(0)
     status_text = st.empty()
 
@@ -483,11 +490,11 @@ if run_clicked:
     progress_bar.progress(25)
     time.sleep(0.6)
 
-    status_text.text("🏛️ Hội đồng Phương Đông & Phương Tây đang đối chiếu bản mệnh người chơi...")
+    status_text.text("🏛️ Huyền Học Phương Đông & Phương Tây đang đối chiếu bản mệnh người chơi...")
     progress_bar.progress(60)
     time.sleep(0.6)
 
-    status_text.text("📊 Hội đồng Thống kê Ma trận đang chạy khẩu vị Hot/Cold...")
+    status_text.text("📊 Thuật Toán Thống Kê đang chạy khẩu vị Hot/Cold...")
     progress_bar.progress(90)
     time.sleep(0.6)
 
