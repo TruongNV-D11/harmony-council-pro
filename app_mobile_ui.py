@@ -108,7 +108,7 @@ st.divider()
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=False):
     st.caption("Kích hoạt âm thanh nền từ kho Vietlott-MP3-File của bạn:")
     # Thay link raw .mp3 từ kho Vietlott-MP3-File của anh vào đây khi cần
-    st.audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf756.mp3?filename=lofi-study-112191.mp3", format="audio/mp3")
+    st.audio("https://github.com/TruongNV-D11/Vietlott-MP3-File.git", format="audio/mp3")
 
 # =====================================================================
 # ⚙️ 5. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH & CHIẾN LƯỢC
@@ -214,7 +214,7 @@ st.divider()
 st.markdown("""
     <div class="watermark-box">
         <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
-        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
+        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV </b></p>
         <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Local-First • Cached Memory Active</p>
     </div>
 """, unsafe_allow_html=True)
