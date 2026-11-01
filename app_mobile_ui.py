@@ -145,19 +145,21 @@ def get_next_draw_datetime(game_key: str) -> datetime:
                 return datetime.combine(check_date, datetime.min.time()).replace(hour=18, minute=0, tzinfo=VN_TZ)
         return now
 
-@st.cache_data(ttl=1800, show_spinner=False)
-def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str]:
+def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str, float]:
     game_cfg = GAMES.get(game_key)
     if not game_cfg:
-        return [], "Game không tồn tại"
+        return [], "Game không tồn tại", 0.0
     
     cache_file = os.path.join(CACHE_DIR, f"history_{game_key}.json")
+    cache_age = 0.0
     if not force_refresh and os.path.exists(cache_file):
+        file_mtime = os.path.getmtime(cache_file)
+        cache_age = time.time() - file_mtime
         try:
             with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if len(data) >= sample_k:
-                    return data[:sample_k], f"📁 Smart Cache Real-time (Đã lưu {len(data)} kỳ)"
+                    return data[:sample_k], f"📁 Smart Cache (Đã lưu {len(data)} kỳ)", cache_age
         except:
             pass
 
@@ -181,7 +183,7 @@ def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) 
     except:
         pass
 
-    return history[:sample_k], "⚡ Real-time Engine & Smart Cache Active"
+    return history[:sample_k], "⚡ Real-time Live Engine Active", 0.0
 
 
 # =====================================================================
@@ -265,7 +267,14 @@ class PhongThuyReferenceCore:
         if idx_60 < 0: idx_60 = 0
         menh = cls.NAP_AM_60[idx_60]
         menh_elem = menh.split()[-1].replace("Thuỷ", "Thủy")
-        cung_menh = "Khảm (Thủy)" if gender.lower() == "nam" else "Cấn (Thổ)"
+        
+        # Cung mệnh Bát Trạch chuẩn theo giới tính & năm âm lịch
+        if gender.lower() == "nam":
+            cung_menh_map = {0: "Khảm (Thủy)", 1: "Khôn (Thổ)", 2: "Chấn (Mộc)", 3: "Tốn (Mộc)", 4: "Cấn (Thổ)", 5: "Càn (Kim)", 6: "Đoài (Kim)", 7: "Cấn (Thổ)", 8: "Ly (Hỏa)"}
+            cung_menh = cung_menh_map.get(l_year % 9, "Khảm (Thủy)")
+        else:
+            cung_menh_map = {0: "Cấn (Thổ)", 1: "Khảm (Thủy)", 2: "Khôn (Thổ)", 3: "Chấn (Mộc)", 4: "Tốn (Mộc)", 5: "Cấn (Thổ)", 6: "Càn (Kim)", 7: "Đoài (Kim)", 8: "Cấn (Thổ)"}
+            cung_menh = cung_menh_map.get(l_year % 9, "Cấn (Thổ)")
 
         Z = [
             ((3,21),(4,20),"Bạch Dương"),((4,21),(5,20),"Kim Ngưu"),
@@ -333,15 +342,16 @@ class FlexibleCouncilEvaluator:
 # 🏛️ 4. HEADER & BANNER
 # =====================================================================
 st.markdown("### 🏛️ HARMONY COUNCIL PRO v2.6")
-st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Bảng Lịch Tết Nguyên Bản & Chuẩn 5/35")
+st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Bảng Lịch Tết Nguyên Bản & Trạng thái Live")
 st.divider()
 
 # =====================================================================
-# 🎵 5. TRÌNH PHÁT NHẠC NỀN TỪ KHO GITHUB CỦA ANH
+# 🎵 5. TRÌNH PHÁT NHẠC NỀN CHUẨN KHO GITHUB (VIETLOTT-MP3-FILE)
 # =====================================================================
-with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=False):
-    st.caption("Kích hoạt âm thanh nền từ kho Vietlott-MP3-File của bạn:")
-    st.audio("https://github.com/TruongNV-D11/Vietlott-Audio.git", format="audio/mp3")
+with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=True):
+    st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-MP3-File` của bạn:")
+    # Sử dụng link audio chuẩn hỗ trợ phát trực tiếp trên trình duyệt
+    st.audio("https://raw.githubusercontent.com/TruongNV-D11/Vietlott-MP3-File/main/ambient_alpha.mp3", format="audio/mp3")
 
 # =====================================================================
 # ⚙️ 6. INPUTS & CẤU HÌNH THỊ TRƯỜNG, KỲ QUAY REAL-TIME & CHIẾN LƯỢC
@@ -389,7 +399,13 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
     gender = st.radio("Giới tính", ["Nam", "Nữ"], horizontal=True)
     
     profile = PhongThuyReferenceCore.get_full_info(dob_str, gender, draw_dt)
-    st.info(f"📅 Bản mệnh: **{profile['can']} {profile['chi']}** — **{profile['menh']}** | 🌟 Cung: **{profile['western_sign']}** | ⚡ Ngày quay hành: **{profile['draw_elem']}**")
+    
+    # Hiển thị chi tiết tầng học thuật: Can Chi, Mệnh, Cung Mệnh Bát Trạch & Cung Hoàng Đạo
+    st.info(
+        f"📅 **Bản mệnh:** {profile['can']} {profile['chi']} — **{profile['menh']}**\n\n"
+        f"🏛️ **Cung Mệnh (Bát Trạch):** {profile['cung_menh']} | 🌟 **Cung Hoàng Đạo:** {profile['western_sign']}\n\n"
+        f"⚡ **Hành ngày quay:** {profile['draw_elem']}"
+    )
 
     st.markdown("---")
     st.markdown("📊 **Cấu hình Tầm nhìn Lịch sử & Khẩu vị Thống kê:**")
@@ -414,11 +430,20 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =====================================================================
-# 🚀 7. CHẠY THỰC THI THỜI GIAN THỰC (REAL-TIME EXECUTION ENGINE)
+# 🚀 7. CHẠY THỰC THI THỜI GIAN THỰC & HIỂN THỊ TRẠNG THÁI CACHE
 # =====================================================================
 st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH THỰC CHIẾN ({num_rows} BỘ SỐ - {game_cfg['label']})")
 
-history_data, data_source_status = get_history(game_key, sample_k=horizon_samples, force_refresh=False)
+# Lấy dữ liệu và đo lường tuổi cache (Cache Age)
+history_data, data_source_status, cache_age_sec = get_history(game_key, sample_k=horizon_samples, force_refresh=False)
+
+# Hiển thị tường minh Trạng thái Data & Tuổi Cache trực quan
+age_min = round(cache_age_sec / 60, 1)
+st.success(
+    f"🌐 **Trạng thái Data:** {data_source_status} | "
+    f"⏱️ **Tuổi Cache (Cache Age):** {age_min} phút ({int(cache_age_sec)} giây) | "
+    f"🕒 **Kỳ quay:** {profile['draw_datetime']}"
+)
 
 max_main = game_cfg["max_main"]
 pick_count = game_cfg["pick"]
@@ -476,12 +501,10 @@ for i in range(1, num_rows + 1):
         "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
         "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
         "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
-        "detail_east": f"Năng lượng Can Chi {profile['can']} {profile['chi']} tương thích hành {profile['menh_elem']}.",
+        "detail_east": f"Can Chi {profile['can']} {profile['chi']} & Cung mệnh {profile['cung_menh']} tương thích hành {profile['menh_elem']}.",
         "detail_west": f"Cộng hưởng sóng nguyên tố cung hoàng đạo {profile['western_sign']}.",
         "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
     })
-
-st.caption(f"🌐 **Trạng thái Dữ liệu:** {data_source_status} | 🕒 **Kỳ quay:** {profile['draw_datetime']}")
 
 for idx, res in enumerate(results, 1):
     balls_html = "".join([f'<div class="ball-number">{num:02d}</div>' for num in res['set']])
@@ -498,21 +521,4 @@ for idx, res in enumerate(results, 1):
         <hr style="border-color: #2A2D3A; margin: 12px 0;">
         <div class="sub-metric">
             <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
-            <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
-            <b>📊 Hội đồng Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.divider()
-
-# =====================================================================
-# 🛡️ 8. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
-# =====================================================================
-st.markdown("""
-    <div class="watermark-box">
-        <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
-        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
-        <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Lịch Tết Nguyên Bản Active</p>
-    </div>
-""", unsafe_allow_html=True)
+            <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b>
