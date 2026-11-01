@@ -365,12 +365,11 @@ st.markdown("""
 st.divider()
 
 # =====================================================================
-# 🎵 5. TRÌNH PHÁT NHẠC NỀN TỰ CHẠY (AUTOPLAY / LOOP AUDIO ENGINE)
+# 🎵 5. TRÌNH PHÁT NHẠC NỀN TỰ CHẠY (VIETLOTT-AUDIO / MUSIC_BG.MP3)
 # =====================================================================
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=True):
-    st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-MP3-File` của bạn (Tự động phát):")
+    st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-Audio` của bạn (Tự động phát):")
     
-    # Mã HTML5 Audio với thuộc tính autoplay, loop và script hỗ trợ tự phát ngay khi load
     audio_html = """
     <audio id="bg-audio" autoplay loop controls style="width: 100%;">
         <source src="https://raw.githubusercontent.com/TruongNV-D11/Vietlott-Audio/main/music_bg.mp3" type="audio/mp3">
@@ -384,7 +383,6 @@ with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambien
                 var playPromise = audio.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        // Tự động thử lại khi người dùng tương tác nhẹ với trang web
                         document.addEventListener('click', () => { audio.play(); }, { once: true });
                     });
                 }
@@ -466,14 +464,14 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
 
     st.markdown("---")
     st.markdown("**🎛️ Bật/Tắt Hội đồng Giám khảo độc lập:**")
-    use_east = st.checkbox("🏛️ Huyền Học Phương Đông (Can Chi / Nạp Âm)", value=True)
-    use_west = st.checkbox("🌟 Huyền Học Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
-    use_stat = st.checkbox("📊 Thuật Toán Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
+    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm)", value=True)
+    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
+    use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =====================================================================
-# 🚀 7. NÚT CHẠY CHƯƠNG TRÌNH & HIỆU ỨNG DELAY / CHẠY CHỮ (ANIMATION)
+# 🚀 7. NÚT CHẠY CHƯƠNG TRÌNH & HIỆU ỨNG DELAY TĂNG CƯỜNG (CHẠY SỐ TỪNG CON & TỪNG DÃY)
 # =====================================================================
 run_clicked = st.button("🚀 Khởi động Hội đồng Chấm điểm (Chạy Chương Trình)")
 
@@ -483,19 +481,19 @@ if run_clicked:
 
     status_text.text("🔄 Đang thiết lập kết nối Real-time & Nạp Smart Cache lịch sử...")
     progress_bar.progress(25)
-    time.sleep(0.4)
+    time.sleep(0.6)
 
     status_text.text("🏛️ Hội đồng Phương Đông & Phương Tây đang đối chiếu bản mệnh người chơi...")
     progress_bar.progress(60)
-    time.sleep(0.4)
+    time.sleep(0.6)
 
     status_text.text("📊 Hội đồng Thống kê Ma trận đang chạy khẩu vị Hot/Cold...")
     progress_bar.progress(90)
-    time.sleep(0.4)
+    time.sleep(0.6)
 
     status_text.text("✅ Hoàn tất thẩm định đa chiều!")
     progress_bar.progress(100)
-    time.sleep(0.3)
+    time.sleep(0.4)
     
     progress_bar.empty()
     status_text.empty()
@@ -577,27 +575,45 @@ if run_clicked:
         
         animated_balls_html = ""
         for num in res['set']:
-            time.sleep(0.12)
+            time.sleep(0.35) 
             animated_balls_html += f'<div class="ball-number">{num:02d}</div>'
             
-            if res["special"] is not None and num == res['set'][-1]:
-                animated_balls_html += f'<div class="ball-special" title="Bóng đặc biệt (1-12)">⚡{res["special"]:02d}</div>'
+            card_placeholder.markdown(f"""
+            <div class="council-card">
+                <span class="score-badge">Harmony Score: {res['score']}%</span>
+                <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game_cfg['label']})</b><br><br>
+                <div style="margin-bottom: 12px;">
+                    {animated_balls_html}
+                </div>
+                <hr style="border-color: #2A2D3A; margin: 12px 0;">
+                <div class="sub-metric">
+                    <b>🏛️ Huyền Học Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
+                    <b>🌟 Huyền Học Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
+                    <b>📊 Thuật Toán Thống Kê ({res['stat_score']}%):</b> {res['detail_stat']}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        card_placeholder.markdown(f"""
-        <div class="council-card">
-            <span class="score-badge">Harmony Score: {res['score']}%</span>
-            <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game_cfg['label']})</b><br><br>
-            <div style="margin-bottom: 12px;">
-                {animated_balls_html}
+        if res["special"] is not None:
+            time.sleep(0.35)
+            animated_balls_html += f'<div class="ball-special" title="Bóng đặc biệt (1-12)">⚡{res["special"]:02d}</div>'
+            card_placeholder.markdown(f"""
+            <div class="council-card">
+                <span class="score-badge">Harmony Score: {res['score']}%</span>
+                <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game_cfg['label']})</b><br><br>
+                <div style="margin-bottom: 12px;">
+                    {animated_balls_html}
+                </div>
+                <hr style="border-color: #2A2D3A; margin: 12px 0;">
+                <div class="sub-metric">
+                    <b>🏛️ Huyền Học Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
+                    <b>🌟 Huyền Học Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
+                    <b>📊 Thuật Toán Thống Kê ({res['stat_score']}%):</b> {res['detail_stat']}
+                </div>
             </div>
-            <hr style="border-color: #2A2D3A; margin: 12px 0;">
-            <div class="sub-metric">
-                <b>🏛️ Huyền Học Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
-                <b>🌟 Huyền Học Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
-                <b>📊 Thuật Toán Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+
+        time.sleep(0.5)
 
 st.divider()
 
@@ -607,7 +623,7 @@ st.divider()
 st.markdown("""
     <div class="watermark-box">
         <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
-        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV</b></p>
+        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
         <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Academic Profile Active</p>
     </div>
 """, unsafe_allow_html=True)
