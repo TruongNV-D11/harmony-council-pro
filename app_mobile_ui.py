@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple, Any
 # 🏛️ 1. CẤU HÌNH GIAO DIỆN DI ĐỘNG & THƯỢNG LƯU (DARK THEME)
 # =====================================================================
 st.set_page_config(
-    page_title="Harmony Council Pro v2.6 - Live Chamber",
+    page_title="VIetlott Harmony Pro v2.6 - Live Chamber",
     page_icon="🏛️",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -350,14 +350,14 @@ class FlexibleCouncilEvaluator:
 # =====================================================================
 # 🏛️ 4. HEADER & BANNER (CÓ TRÍCH YẾU HỌC THUẬT)
 # =====================================================================
-st.markdown("### 🏛️ HARMONY COUNCIL PRO v2.6")
-st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Bảng Lịch Tết Nguyên Bản & Trạng thái Live")
+st.markdown("### 🏛️ VIETLOTT HARMONY PRO v2.6")
+st.caption("🔒 **REAL-TIME CACHED ENGINE** ")
 
 # 👉 Bổ sung Trích yếu Học thuật ứng dụng trong App
 st.markdown("""
 <div class="academic-banner">
     <b>📜 TRÍCH YẾU HỌC THUẬT ỨNG DỤNG:</b><br>
-    • <b>Phương Đông:</b> Lịch Tết Âm lịch chuẩn (1924–2100), Can Chi, Nạp Âm 60 Hoa Giáp & Cung Mệnh Bát Trạch.<br>
+    • <b>Phương Đông:</b> Can Chi, Nạp Âm 60 Hoa Giáp & Cung Mệnh Bát Trạch.<br>
     • <b>Phương Tây:</b> Chiêm tinh học, 12 Cung Hoàng đạo & Tứ đại Nguyên tố (Hỏa, Thổ, Khí, Thủy).<br>
     • <b>Thống kê:</b> Ma trận tần suất lịch sử đa chiều (Chiến lược Hot / Neutral / Cold động).
 </div>
@@ -405,7 +405,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
         draw_dt = initial_draw_dt
 
     st.markdown("---")
-    st.markdown("👤 **Ngày sinh Bản mệnh người chơi (Áp dụng Bảng Lịch Tết Nguyên Bản):**")
+    st.markdown("👤 **Ngày sinh Bản mệnh người chơi (Áp dụng Bảng Lịch Tết Nguyên Đán):**")
     col_bd, col_bm, col_by = st.columns(3)
     with col_bd:
         bday = st.selectbox("Ngày sinh", list(range(1, 32)), index=1)
@@ -446,9 +446,9 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
     st.markdown("---")
     st.markdown("**🎛️ Bật/Tắt Hội đồng Giám khảo độc lập:**")
     # 👉 Bảng 1: Thêm Chiêm tinh học vào sau Cung Hoàng đạo
-    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm)", value=True)
-    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
-    use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
+    use_east = st.checkbox("🏛️ Huyền học Phương Đông (Can Chi / Nạp Âm)", value=True)
+    use_west = st.checkbox("🌟 Huyền học Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
+    use_stat = st.checkbox("📊 Thuật toán Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
