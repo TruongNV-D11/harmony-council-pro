@@ -185,15 +185,69 @@ def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) 
 
 
 # =====================================================================
-# 📚 3. KHO PHONG THỦY & HỘI ĐỒNG THẨM ĐỊNH ĐA CHIỀU (REAL CORE)
+# 📚 3. BẢNG TRA "LỊCH TẾT" NGUYÊN BẢN (1924–2100) & PHONG THỦY CORE
 # =====================================================================
 class PhongThuyReferenceCore:
+    VIETNAMESE_NEW_YEAR = {
+        1924: (5, 2), 1925: (24, 1), 1926: (13, 2), 1927: (2, 2), 1928: (23, 1),
+        1929: (10, 2), 1930: (30, 1), 1931: (17, 2), 1932: (6, 2), 1933: (26, 1),
+        1934: (14, 2), 1935: (4, 2), 1936: (24, 1), 1937: (11, 2), 1938: (31, 1),
+        1939: (19, 2), 1940: (8, 2), 1941: (27, 1), 1942: (15, 2), 1943: (4, 2),
+        1944: (25, 1), 1945: (13, 2), 1946: (2, 2), 1947: (22, 1), 1948: (10, 2),
+        1949: (29, 1), 1950: (17, 2), 1951: (6, 2), 1952: (27, 1), 1953: (14, 2),
+        1954: (5, 2), 1955: (24, 1), 1956: (12, 2), 1957: (31, 1), 1958: (18, 2),
+        1959: (8, 2), 1960: (28, 1), 1961: (15, 2), 1962: (5, 2), 1963: (25, 1),
+        1964: (13, 2), 1965: (2, 2), 1966: (21, 1), 1967: (9, 2), 1968: (30, 1),
+        1969: (17, 2), 1970: (6, 2), 1971: (27, 1), 1972: (15, 2), 1973: (3, 2),
+        1974: (23, 1), 1975: (11, 2), 1976: (31, 1), 1977: (18, 2), 1978: (7, 2),
+        1979: (28, 1), 1980: (16, 2), 1981: (5, 2), 1982: (25, 1), 1983: (13, 2),
+        1984: (2, 2), 1985: (20, 2), 1986: (9, 2), 1987: (29, 1), 1988: (17, 2),
+        1989: (6, 2), 1990: (27, 1), 1991: (15, 2), 1992: (4, 2), 1993: (23, 1),
+        1994: (10, 2), 1995: (31, 1), 1996: (19, 2), 1997: (7, 2), 1998: (28, 1),
+        1999: (16, 2), 2000: (5, 2), 2001: (24, 1), 2002: (12, 2), 2003: (1, 2),
+        2004: (22, 1), 2005: (9, 2), 2006: (29, 1), 2007: (18, 2), 2008: (7, 2),
+        2009: (26, 1), 2010: (14, 2), 2011: (3, 2), 2012: (23, 1), 2013: (10, 2),
+        2014: (31, 1), 2015: (19, 2), 2016: (8, 2), 2017: (28, 1), 2018: (16, 2),
+        2019: (5, 2), 2020: (25, 1), 2021: (12, 2), 2022: (1, 2), 2023: (22, 1),
+        2024: (10, 2), 2025: (29, 1), 2026: (17, 2), 2027: (6, 2), 2028: (26, 1),
+        2029: (13, 2), 2030: (3, 2), 2031: (23, 1), 2032: (11, 2), 2033: (31, 1),
+        2034: (19, 2), 2035: (8, 2), 2036: (28, 1), 2037: (15, 2), 2038: (4, 2),
+        2039: (24, 1), 2040: (12, 2), 2041: (1, 2), 2042: (22, 1), 2043: (10, 2),
+        2044: (30, 1), 2045: (17, 2), 2046: (6, 2), 2047: (26, 1), 2048: (14, 2),
+        2049: (2, 2), 2050: (23, 1), 2051: (11, 2), 2052: (31, 1), 2053: (19, 2),
+        2054: (8, 2), 2055: (28, 1), 2056: (15, 2), 2057: (4, 2), 2058: (24, 1),
+        2059: (12, 2), 2060: (2, 2), 2061: (21, 1), 2062: (10, 2), 2063: (29, 1),
+        2064: (17, 2), 2065: (5, 2), 2066: (26, 1), 2067: (14, 2), 2068: (3, 2),
+        2069: (22, 1), 2070: (11, 2), 2071: (31, 1), 2072: (19, 2), 2073: (7, 2),
+        2074: (27, 1), 2075: (16, 2), 2076: (5, 2), 2077: (24, 1), 2078: (13, 2),
+        2079: (3, 2), 2080: (22, 1), 2081: (9, 2), 2082: (29, 1), 2083: (18, 2),
+        2084: (4, 2), 2085: (24, 1), 2086: (12, 2), 2087: (1, 2), 2088: (21, 1),
+        2089: (9, 2), 2090: (29, 1), 2091: (17, 2), 2092: (6, 2), 2093: (25, 1),
+        2094: (13, 2), 2095: (2, 2), 2096: (22, 1), 2097: (10, 2), 2098: (30, 1),
+        2099: (18, 2), 2100: (9, 2)
+    }
+
     CAN = ["Giáp","Ất","Bính","Đinh","Mậu","Kỷ","Canh","Tân","Nhâm","Quý"]
     CHI = ["Tý","Sửu","Dần","Mão","Thìn","Tỵ","Ngọ","Mùi","Thân","Dậu","Tuất","Hợi"]
     NAP_AM_60 = [
-        "Hải Trung Kim","Lư Trung Hỏa","Đại Lâm Mộc","Giản Hạ Thủy","Đại Khê Thủy",
-        "Sa Trung Thổ","Thiên Thượng Hỏa","Thạch Lựu Mộc","Đại Hải Thủy","Bạch Lạp Kim"
+        "Hải Trung Kim","Hải Trung Kim","Lư Trung Hỏa","Lư Trung Hỏa","Đại Lâm Mộc","Đại Lâm Mộc",
+        "Lộ Bàng Thổ","Lộ Bàng Thổ","Kiếm Phong Kim","Kiếm Phong Kim",
+        "Sơn Đầu Hỏa","Sơn Đầu Hỏa","Giản Hạ Thủy","Giản Hạ Thủy","Thành Đầu Thổ","Thành Đầu Thổ",
+        "Bạch Lạp Kim","Bạch Lạp Kim","Dương Liễu Mộc","Dương Liễu Mộc",
+        "Tuyền Trung Thủy","Tuyền Trung Thủy","Ốc Thượng Thổ","Ốc Thượng Thổ",
+        "Tích Lịch Hỏa","Tích Lịch Hỏa","Tùng Bách Mộc","Tùng Bách Mộc","Trường Lưu Thủy","Trường Lưu Thủy",
+        "Sa Trung Kim","Sa Trung Kim","Sơn Hạ Hỏa","Sơn Hạ Hỏa","Bình Địa Mộc","Bình Địa Mộc",
+        "Bích Thượng Thổ","Bích Thượng Thổ","Kim Bạch Kim","Kim Bạch Kim",
+        "Phú Đăng Hỏa","Phú Đăng Hỏa","Thiên Hà Thủy","Thiên Hà Thủy","Đại Trạch Thổ","Đại Trạch Thổ",
+        "Thoa Xuyến Kim","Thoa Xuyến Kim","Tang Đố Mộc","Tang Đố Mộc","Đại Khê Thủy","Đại Khê Thủy",
+        "Sa Trung Thổ","Sa Trung Thổ","Thiên Thượng Hỏa","Thiên Thượng Hỏa","Thạch Lựu Mộc","Thạch Lựu Mộc",
+        "Đại Hải Thủy","Đại Hải Thủy"
     ]
+
+    @classmethod
+    def get_lunar_year(cls, y: int, m: int, d: int) -> int:
+        tet_day, tet_month = cls.VIETNAMESE_NEW_YEAR.get(y, (21, 1))
+        return y - 1 if (m < tet_month or (m == tet_month and d < tet_day)) else y
 
     @classmethod
     def get_full_info(cls, dob_str: str, gender: str, draw_dt: datetime) -> Dict[str, Any]:
@@ -203,11 +257,13 @@ class PhongThuyReferenceCore:
         except:
             d, m, y = 2, 2, 1974
 
-        l_year = y - 1 if m < 2 or (m == 2 and d < 4) else y
+        l_year = cls.get_lunar_year(y, m, d)
         can_idx = (l_year - 4) % 10
         chi_idx = (l_year - 4) % 12
         
-        menh = cls.NAP_AM_60[(l_year - 1924) % len(cls.NAP_AM_60)]
+        idx_60 = ((l_year - 1924) % 60)
+        if idx_60 < 0: idx_60 = 0
+        menh = cls.NAP_AM_60[idx_60]
         menh_elem = menh.split()[-1].replace("Thuỷ", "Thủy")
         cung_menh = "Khảm (Thủy)" if gender.lower() == "nam" else "Cấn (Thổ)"
 
@@ -277,7 +333,7 @@ class FlexibleCouncilEvaluator:
 # 🏛️ 4. HEADER & BANNER
 # =====================================================================
 st.markdown("### 🏛️ HARMONY COUNCIL PRO v2.6")
-st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Dữ liệu Thời gian thực & Tiêu chuẩn 5/35")
+st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Bảng Lịch Tết Nguyên Bản & Chuẩn 5/35")
 st.divider()
 
 # =====================================================================
@@ -285,7 +341,6 @@ st.divider()
 # =====================================================================
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=False):
     st.caption("Kích hoạt âm thanh nền từ kho Vietlott-MP3-File của bạn:")
-    # Thay link Raw GitHub file .mp3 của anh vào đây khi cần
     st.audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf756.mp3?filename=lofi-study-112191.mp3", format="audio/mp3")
 
 # =====================================================================
@@ -321,7 +376,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
         draw_dt = initial_draw_dt
 
     st.markdown("---")
-    st.markdown("👤 **Ngày sinh Bản mệnh người chơi:**")
+    st.markdown("👤 **Ngày sinh Bản mệnh người chơi (Áp dụng Bảng Lịch Tết Nguyên Bản):**")
     col_bd, col_bm, col_by = st.columns(3)
     with col_bd:
         bday = st.selectbox("Ngày sinh", list(range(1, 32)), index=1)
@@ -363,7 +418,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 # =====================================================================
 st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH THỰC CHIẾN ({num_rows} BỘ SỐ - {game_cfg['label']})")
 
-# 1. Lấy dữ liệu Real-time qua Smart Cache
 history_data, data_source_status = get_history(game_key, sample_k=horizon_samples, force_refresh=False)
 
 max_main = game_cfg["max_main"]
@@ -371,14 +425,12 @@ pick_count = game_cfg["pick"]
 has_special = game_cfg.get("has_special", False)
 special_max = game_cfg.get("special_max", 12)
 
-# 2. Xây dựng bản đồ tần suất từ lịch sử thực tế
 freq_map = {i: 0 for i in range(1, max_main + 1)}
 for row in history_data:
     for num in row.get("mains", []):
         if 1 <= num <= max_main:
             freq_map[num] += 1
 
-# 3. Thu thập danh sách hội đồng hoạt động
 active_councils = []
 if use_east: active_councils.append("eastern")
 if use_west: active_councils.append("western")
@@ -386,7 +438,6 @@ if use_stat: active_councils.append("statistics")
 
 weight_per_council = 1.0 / len(active_councils) if active_councils else 1.0
 
-# 4. Chấm điểm toàn bộ dải số ứng viên qua Real Core Engine
 candidate_scores = []
 for num in range(1, max_main + 1):
     total_score = 0.0
@@ -407,7 +458,6 @@ for num in range(1, max_main + 1):
 candidate_scores.sort(key=lambda x: x[1], reverse=True)
 top_pool = [item[0] for item in candidate_scores[:max(int(max_main * 0.6), pick_count + 5)]]
 
-# 5. Sinh kết quả bộ số gợi ý đúng chuẩn định dạng (có bóng đặc biệt nếu là 5/35)
 results = []
 rnd = random.Random()
 for i in range(1, num_rows + 1):
@@ -463,6 +513,6 @@ st.markdown("""
     <div class="watermark-box">
         <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
         <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
-        <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Cached Memory Active</p>
+        <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Lịch Tết Nguyên Bản Active</p>
     </div>
 """, unsafe_allow_html=True)
