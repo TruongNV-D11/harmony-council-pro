@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple, Any
 # 🏛️ 1. CẤU HÌNH GIAO DIỆN DI ĐỘNG & THƯỢNG LƯU (DARK THEME)
 # =====================================================================
 st.set_page_config(
-    page_title="VIetlott Harmony Pro v2.6 - Live Chamber",
+    page_title="Vietlott Harmony Pro v2.6 - Live Chamber",
     page_icon="🏛️",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -351,7 +351,7 @@ class FlexibleCouncilEvaluator:
 # 🏛️ 4. HEADER & BANNER (CÓ TRÍCH YẾU HỌC THUẬT)
 # =====================================================================
 st.markdown("### 🏛️ VIETLOTT HARMONY PRO v2.6")
-st.caption("🔒 **REAL-TIME CACHED ENGINE** ")
+st.caption("🔒 **REAL-TIME SMART CACHED ENGINE** ")
 
 # 👉 Bổ sung Trích yếu Học thuật ứng dụng trong App
 st.markdown("""
@@ -370,7 +370,7 @@ st.divider()
 # =====================================================================
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=True):
     st.caption("Trình phát âm thanh tần số Alpha từ kho `Vietlott-MP3-File` của bạn:")
-    st.audio("https://raw.githubusercontent.com/TruongNV-D11/Vietlott-MP3-File/main/ambient_alpha.mp3", format="audio/mp3")
+    st.audio("https://raw.githubusercontent.com/TruongNV-D11/Vietlott-Audio/main/music_bg.mp3", format="audio/mp3")
 
 # =====================================================================
 # ⚙️ 6. INPUTS & CẤU HÌNH THỊ TRƯỜNG, KỲ QUAY REAL-TIME & CHIẾN LƯỢC
