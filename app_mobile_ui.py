@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple, Any
 # 🏛️ 1. CẤU HÌNH GIAO DIỆN DI ĐỘNG & THƯỢNG LƯU (DARK THEME)
 # =====================================================================
 st.set_page_config(
-    page_title="Harmony Council Pro v2.6 - Live Chamber",
+    page_title="Vietlott Harmony Edition v2.6 - Live Chamber",
     page_icon="🏛️",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -197,7 +197,7 @@ def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) 
 
 
 # =====================================================================
-# 📚 3. THUẬT TOÁN THIÊN VĂN TIẾT LẬP XUÂN & BÁT TRẠCH CUNG PHI CHÍNH THỐNG
+# 📚 3. THUẬT TOÁN THIÊN VĂN TIẾT LẬP XUÂN & CUNG PHI CHÍNH THỐNG
 # =====================================================================
 class PhongThuyReferenceCore:
     CAN = ["Giáp","Ất","Bính","Đinh","Mậu","Kỷ","Canh","Tân","Nhâm","Quý"]
@@ -221,15 +221,20 @@ class PhongThuyReferenceCore:
     def get_solar_term_riping(year: int) -> datetime:
         """
         Thuật toán tính toán thời điểm Tiết Lập Xuân (Kinh độ Mặt Trời 315 độ) 
-        tự động cho mọi năm theo thiên văn học (Không dùng bảng fix cứng).
+        tự động có cơ chế an toàn chống tràn ngày tháng (ValueError fallback).
         """
-        base_year = 2000
-        base_datetime = datetime(2000, 2, 4, 12, 18) # Giờ UTC chuẩn
-        year_diff = year - base_year
-        hours_shift = year_diff * 5.8167 + (year_diff // 4) * 24 - (year_diff // 100) * 24 + (year_diff // 400) * 24
-        lap_xuan_utc = base_datetime + timedelta(hours=hours_shift)
-        lap_xuan_vn = lap_xuan_utc + timedelta(hours=7)
-        return datetime(year, 2, lap_xuan_vn.day, lap_xuan_vn.hour, lap_xuan_vn.minute)
+        try:
+            base_year = 2000
+            base_datetime = datetime(2000, 2, 4, 12, 18) # Giờ UTC chuẩn
+            year_diff = year - base_year
+            hours_shift = year_diff * 5.8167 + (year_diff // 4) * 24 - (year_diff // 100) * 24 + (year_diff // 400) * 24
+            lap_xuan_utc = base_datetime + timedelta(hours=hours_shift)
+            lap_xuan_vn = lap_xuan_utc + timedelta(hours=7)
+            
+            safe_day = 4 if lap_xuan_vn.day < 5 else 5
+            return datetime(year, 2, safe_day, lap_xuan_vn.hour, lap_xuan_vn.minute)
+        except Exception:
+            return datetime(year, 2, 4, 12, 0)
 
     @classmethod
     def get_lunar_year(cls, y: int, m: int, d: int) -> int:
@@ -259,13 +264,13 @@ class PhongThuyReferenceCore:
         menh = cls.NAP_AM_60[idx_60]
         menh_elem = menh.split()[-1].replace("Thuỷ", "Thủy")
         
-        # Bát Trạch Cung Phi chuẩn chỉnh (10 - N cho Nam, 5 + N cho Nữ)
+        # Công thức Cung Phi chính thống (10 - N cho Nam, 5 + N cho Nữ)
         year_str = str(l_year)
         sum_digits = int(year_str[-2]) + int(year_str[-1])
         while sum_digits > 9:
             sum_digits = sum_digits // 10 + sum_digits % 10
             
-        cung_menh_map = {
+        cung_phi_map = {
             1: "Khảm (Thủy)", 2: "Khôn (Thổ)", 3: "Chấn (Mộc)", 
             4: "Tốn (Mộc)", 6: "Càn (Kim)", 7: "Đoài (Kim)", 
             8: "Cấn (Thổ)", 9: "Ly (Hỏa)"
@@ -274,13 +279,13 @@ class PhongThuyReferenceCore:
         if gender.lower() == "nam":
             remainder = 10 - sum_digits
             if remainder == 5: remainder = 2
-            cung_menh = cung_menh_map.get(remainder, "Cấn (Thổ)")
+            cung_phi = cung_phi_map.get(remainder, "Cấn (Thổ)")
         else:
             remainder = 5 + sum_digits
             while remainder > 9:
                 remainder = remainder // 10 + remainder % 10
             if remainder == 5: remainder = 8
-            cung_menh = cung_menh_map.get(remainder, "Đoài (Kim)")
+            cung_phi = cung_phi_map.get(remainder, "Đoài (Kim)")
 
         Z = [
             ((3,21),(4,20),"Bạch Dương"),((4,21),(5,20),"Kim Ngưu"),
@@ -302,7 +307,7 @@ class PhongThuyReferenceCore:
         return {
             "can": cls.CAN[can_idx], "chi": cls.CHI[chi_idx],
             "menh": menh, "menh_elem": menh_elem,
-            "cung_menh": cung_menh, "western_sign": wz,
+            "cung_phi": cung_phi, "western_sign": wz,
             "draw_datetime": draw_dt.strftime("%d/%m/%Y %H:%M"),
             "draw_elem": draw_elem,
         }
@@ -347,13 +352,13 @@ class FlexibleCouncilEvaluator:
 # =====================================================================
 # 🏛️ 4. HEADER & BANNER (TRÍCH YẾU HỌC THUẬT)
 # =====================================================================
-st.markdown("### 🏛️ HARMONY COUNCIL PRO v2.6")
-st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Thuật toán Tiết Lập Xuân & Bát Trạch Chính Thống")
+st.markdown("### 🏛️ Vietlott Harmony Edition v2.6")
+st.caption("🔒 **REAL-TIME CACHED ENGINE** | Tích hợp Thuật toán Tiết Lập Xuân & Cung Phi Chuẩn Thính")
 
 st.markdown("""
 <div class="academic-banner">
     <b>📜 TRÍCH YẾU HỌC THUẬT ỨNG DỤNG:</b><br>
-    • <b>Phương Đông:</b> Thuật toán Tiết Lập Xuân chuẩn thiên văn (Kinh độ Mặt Trời 315°), Can Chi, Nạp Âm 60 Hoa Giáp & Bát Trạch Cung Phi chuẩn xác.<br>
+    • <b>Phương Đông:</b> Thuật toán Tiết Lập Xuân chuẩn thiên văn (Kinh độ Mặt Trời 315°), Can Chi, Nạp Âm 60 Hoa Giáp & Cung Phi chuẩn xác.<br>
     • <b>Phương Tây:</b> Chiêm tinh học, 12 Cung Hoàng đạo & Tứ đại Nguyên tố (Hỏa, Thổ, Khí, Thủy).<br>
     • <b>Thống kê:</b> Ma trận tần suất lịch sử đa chiều (Chiến lược Hot / Neutral / Cold động).
 </div>
@@ -417,7 +422,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
         draw_dt = initial_draw_dt
 
     st.markdown("---")
-    st.markdown("👤 **Ngày sinh Bản mệnh người chơi (Áp dụng Tiết Lập Xuân & Bát Trạch):**")
+    st.markdown("👤 **Ngày sinh Bản mệnh người chơi (Áp dụng Tiết Lập Xuân & Cung Phi):**")
     col_bd, col_bm, col_by = st.columns(3)
     with col_bd:
         bday = st.selectbox("Ngày sinh", list(range(1, 32)), index=1)
@@ -434,7 +439,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
     st.markdown(f"""
     <div style="background-color: #1A1C23; border: 1px solid #1D976C; border-radius: 10px; padding: 15px; margin-top: 10px; line-height: 1.8;">
         📅 <b>Bản mệnh (Chuẩn Lập Xuân):</b> {profile['can']} {profile['chi']} — <b>{profile['menh']}</b><br>
-        🏛️ <b>Cung Mệnh (Bát Trạch Cung Phi):</b> {profile['cung_menh']}<br>
+        🏛️ <b>Cung Mệnh (Cung Phi):</b> {profile['cung_phi']}<br>
         🌟 <b>Cung Hoàng Đạo:</b> {profile['western_sign']} &nbsp;|&nbsp; 🔮 <b>Chiêm Tinh Học:</b> Tứ đại Nguyên tố cộng hưởng<br>
         ⚡ <b>Hành ngày quay:</b> {profile['draw_elem']}
     </div>
@@ -456,7 +461,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
 
     st.markdown("---")
     st.markdown("**🎛️ Bật/Tắt Hội đồng Giám khảo độc lập:**")
-    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm / Bát Trạch)", value=True)
+    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm / Cung Phi)", value=True)
     use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo | Chiêm Tinh Học)", value=True)
     use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
 
@@ -566,7 +571,7 @@ if run_clicked:
             "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
             "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
             "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
-            "detail_east": f"Can Chi {profile['can']} {profile['chi']} & Cung mệnh Bát Trạch {profile['cung_menh']} tương thích hành {profile['menh_elem']}.",
+            "detail_east": f"Can Chi {profile['can']} {profile['chi']} & Cung Phi {profile['cung_phi']} tương thích hành {profile['menh_elem']}.",
             "detail_west": f"Cộng hưởng sóng Chiêm tinh học & cung hoàng đạo {profile['western_sign']}.",
             "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
         })
@@ -623,7 +628,7 @@ st.divider()
 # =====================================================================
 st.markdown("""
     <div class="watermark-box">
-        <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
+        <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ Vietlott Harmony Edition v2.6 — MOBILE EDITION</p>
         <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
         <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Academic Profile Active</p>
     </div>
