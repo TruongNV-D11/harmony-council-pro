@@ -650,13 +650,13 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (DIRECT REST API BYPASS SDK)
+# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (DYNAMIC AUTO-DISCOVERY REST API)
 # =====================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện & Giải mã Toàn bộ Code & Thuật toán", expanded=False):
     st.markdown("""
     <p style="color: #A0A5B5; font-size: 13px; margin-bottom: 15px;">
-    Trợ lý AI sử dụng Gemini API trực tiếp qua REST Protocol chuẩn. Bạn có thể hỏi bất cứ điều gì về cách hoạt động của các hàm hoặc cơ chế hội đồng.
+    Trợ lý AI tự động quét danh sách model hợp lệ từ tài khoản API của bạn để gọi REST Protocol chuẩn. Bạn có thể hỏi bất cứ điều gì về mã nguồn.
     </p>
     """, unsafe_allow_html=True)
 
@@ -673,7 +673,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
             st.markdown(user_query)
 
         with st.chat_message("assistant"):
-            with st.spinner("Gemini đang đọc hiểu mã nguồn và phân tích thực tế..."):
+            with st.spinner("Đang tự động xác định model khả dụng và phân tích..."):
                 try:
                     api_key = st.secrets.get("GEMINI_API_KEY", "")
                     if not api_key:
@@ -687,13 +687,27 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         - `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold theo tầm nhìn mẫu.
                         
                         QUY TẮC BẮT BUỘC:
-                        1. Trả lời thẳng vào câu hỏi của người dùng bằng cách trích dẫn trực tiếp logic hoặc tên hàm có thật trong mã nguồn ở上の.
+                        1. Trả lời thẳng vào câu hỏi của người dùng bằng cách trích dẫn trực tiếp logic hoặc tên hàm có thật trong mã nguồn ở trên.
                         2. Dùng ngôn ngữ đời sống, tâm lý hành vi để giải thích (Sociological Translation).
                         3. PHẢI LUÔN SÒNG PHẢNG NHẮC NHỞ: Xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật và quản trị cảm xúc chứ không dự đoán hay hứa hẹn trúng thưởng.
                         """
                         
-                        # Gọi trực tiếp qua REST API v1beta / v1 để bypass hoàn toàn lỗi SDK Python
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                        # 1. Tự động lấy danh sách model thực tế từ API Key của tài khoản
+                        models_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+                        models_resp = requests.get(models_url, timeout=10)
+                        
+                        target_model_name = "gemini-1.5-flash" # Mặc định
+                        if models_resp.status_code == 200:
+                            models_data = models_resp.json().get("models", [])
+                            for m in models_data:
+                                name = m.get("name", "") # VD: "models/gemini-1.5-flash"
+                                methods = m.get("supportedGenerationMethods", [])
+                                if "generateContent" in methods:
+                                    target_model_name = name.replace("models/", "")
+                                    break
+                        
+                        # 2. Gửi request generateContent với đúng model đang có quyền sử dụng
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model_name}:generateContent?key={api_key}"
                         
                         payload = {
                             "contents": [{"parts": [{"text": f"System Instruction:\n{gemini_system_prompt}\n\nUser Question:\n{user_query}"}]}]
@@ -708,16 +722,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                             st.markdown(ai_reply, unsafe_allow_html=True)
                             st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
                         else:
-                            # Thử fallback sang v1 nếu v1beta lỗi
-                            url_v1 = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
-                            response_v1 = requests.post(url_v1, headers=headers, json=payload, timeout=20)
-                            if response_v1.status_code == 200:
-                                res_json = response_v1.json()
-                                ai_reply = res_json['candidates'][0]['content']['parts'][0]['text']
-                                st.markdown(ai_reply, unsafe_allow_html=True)
-                                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
-                            else:
-                                st.error(f"Lỗi kết nối Gemini API (Mã lỗi {response.status_code}): {response.text}")
+                            st.error(f"Lỗi kết nối Gemini API với model '{target_model_name}' (Mã lỗi {response.status_code}): {response.text}")
                         
                 except Exception as e:
                     st.error(f"Lỗi hệ thống kết nối AI: {e}")
