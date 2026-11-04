@@ -649,7 +649,7 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (FORCE GEMINI-3.8-FLASH & FALLBACK)
+# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (SAFE MODEL RESOLUTION)
 # =====================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện & Giải mã Toàn bộ Code & Thuật toán", expanded=False):
@@ -695,30 +695,26 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         3. PHẢI LUÔN SÒNG PHẢNG NHẮC NHỞ: Xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật và quản trị cảm xúc chứ không dự đoán hay hứa hẹn trúng thưởng.
                         """
                         
-                        # Ưu tiên trực tiếp gọi model gemini-3.8-flash theo khuyến nghị mới nhất của Google API
-                        target_model = 'gemini-3.8-flash'
-                        
+                        # An toàn lấy tên model trực tiếp từ thuộc tính .name của đối tượng model
+                        target_model = 'gemini-1.5-flash'
                         try:
-                            model = genai.GenerativeModel(
-                                model_name=target_model,
-                                system_instruction=gemini_system_prompt
-                            )
-                            response = model.generate_content(user_query)
-                            ai_reply = response.text
+                            models_list = list(genai.list_models())
+                            for m in models_list:
+                                if hasattr(m, 'supported_generation_methods') and 'generateContent' in m.supported_generation_methods:
+                                    m_name = str(getattr(m, 'name', '')).lower()
+                                    if 'flash' in m_name and 'pro' not in m_name:
+                                        target_model = m.name.replace('models/', '')
+                                        break
                         except Exception:
-                            # Fallback thông minh: Quét các model khả dụng khác nếu model chính bận
-                            available_models = [
-                                m.name for m in genai.list_models() 
-                                if 'generateContent' in m.supported_generation_methods and 'pro' not in m.lower()
-                            ]
-                            fallback_name = available_models[0].replace('models/', '') if available_models else 'gemini-1.5-flash'
-                            
-                            model = genai.GenerativeModel(
-                                model_name=fallback_name,
-                                system_instruction=gemini_system_prompt
-                            )
-                            response = model.generate_content(user_query)
-                            ai_reply = response.text
+                            pass
+
+                        model = genai.GenerativeModel(
+                            model_name=target_model,
+                            system_instruction=gemini_system_prompt
+                        )
+                        
+                        response = model.generate_content(user_query)
+                        ai_reply = response.text
                         
                         st.markdown(ai_reply, unsafe_allow_html=True)
                         st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
