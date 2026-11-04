@@ -649,7 +649,7 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (LOCKED TO GEMINI-1.5-FLASH)
+# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (MODERN SDK COMPATIBLE)
 # =====================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện & Giải mã Toàn bộ Code & Thuật toán", expanded=False):
@@ -695,17 +695,29 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         3. PHẢI LUÔN SÒNG PHẢNG NHẮC NHỞ: Xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật và quản trị cảm xúc chứ không dự đoán hay hứa hẹn trúng thưởng.
                         """
                         
-                        # Ép buộc sử dụng chuẩn gemini-1.5-flash tối ưu nhất cho Google AI Studio API Key hiện tại
-                        model = genai.GenerativeModel(
-                            model_name='gemini-1.5-flash',
-                            system_instruction=gemini_system_prompt
-                        )
+                        # Thử kết nối qua các định danh model chuẩn hiện hành phù hợp với AI Studio Key mới
+                        response = None
+                        last_err = None
                         
-                        response = model.generate_content(user_query)
-                        ai_reply = response.text
-                        
-                        st.markdown(ai_reply, unsafe_allow_html=True)
-                        st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+                        for candidate in ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro']:
+                            try:
+                                model = genai.GenerativeModel(
+                                    model_name=candidate,
+                                    system_instruction=gemini_system_prompt
+                                )
+                                response = model.generate_content(user_query)
+                                if response and response.text:
+                                    break
+                            except Exception as ex:
+                                last_err = ex
+                                continue
+                                
+                        if response and response.text:
+                            ai_reply = response.text
+                            st.markdown(ai_reply, unsafe_allow_html=True)
+                            st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+                        else:
+                            st.error(f"Không thể kết nối API. Chi tiết lỗi: {last_err}")
                         
                 except Exception as e:
                     st.error(f"Lỗi kết nối Gemini API: {e}")
