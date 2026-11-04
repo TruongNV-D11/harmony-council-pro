@@ -100,15 +100,6 @@ st.markdown("""
         margin-bottom: 15px;
         line-height: 1.6;
     }
-    .ai-assistant-box {
-        background: rgba(13, 27, 42, 0.85);
-        border-left: 4px solid #00E676;
-        padding: 18px;
-        border-radius: 8px;
-        margin-top: 15px;
-        font-size: 14px;
-        line-height: 1.6;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -658,13 +649,13 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 💬 8. HỘP CHỨC NĂNG AI: TÍCH HỢP GEMINI API VỚI NGỮ CẢNH TOÀN BỘ CODE
+# 💬 8. HỘP CHỨC NĂNG AI: TÍCH HỢP GEMINI API THẬT (ĐỌC HIỂU TOÀN BỘ CODE)
 # =====================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện & Giải mã Toàn bộ Code & Thuật toán", expanded=False):
     st.markdown("""
     <p style="color: #A0A5B5; font-size: 13px; margin-bottom: 15px;">
-    Trợ lý AI sử dụng Gemini API với khả năng đọc hiểu toàn bộ mã nguồn ứng dụng. Bạn có thể hỏi bất cứ điều gì về cách hoạt động của các hàm, cơ chế hội đồng, hoặc ý nghĩa xác suất.
+    Trợ lý AI sử dụng Gemini API với khả năng đọc hiểu mã nguồn thực tế. Bạn có thể hỏi bất cứ điều gì về cách hoạt động của các hàm, cơ chế hội đồng, hoặc ý nghĩa xác suất.
     </p>
     """, unsafe_allow_html=True)
 
@@ -681,41 +672,43 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
             st.markdown(user_query)
 
         with st.chat_message("assistant"):
-            with st.spinner("Gemini đang đọc hiểu mã nguồn và tổng hợp lăng kính xã hội học..."):
-                
-                # Nạp toàn bộ ngữ cảnh mã nguồn và cấu trúc code vào System Prompt của Gemini
-                gemini_system_prompt = f"""
-                BẠN LÀ TRỢ LÝ AI CAO CẤP CỦA ỨNG DỤNG 'Vietlott Harmony Edition v2.6'. 
-                BẠN ĐÃ ĐƯỢC NẠP TOÀN BỘ MÃ NGUỒN VÀ HIỂU RÕ TỪNG HÀM TRONG CODE:
-                - Các game được hỗ trợ: 5x35 (có bóng đặc biệt 1-12), 6x45, 6x55.
-                - Hội đồng Phương Đông: Dùng `PhongThuyReferenceCore` tính Can Chi chuẩn Tiết Lập Xuân (kinh độ 315°), Nạp Âm 60 Hoa Giáp và Cung Phi Lạc Thư phân rã theo giới tính.
-                - Hội đồng Phương Tây: Dùng `FlexibleCouncilEvaluator.judge_western_deep` với 3 tầng (Tứ đại Nguyên tố, Phẩm tính Vận động Cardinal/Fixed/Mutable, Hành tinh Đắc vị).
-                - Hội đồng Thống kê: Lọc chiến lược Hot / Neutral / Cold dựa trên tầm nhìn mẫu (`horizon_samples`).
-
-                QUY TẮC BẮT BUỘC KHI TRẢ LỜI:
-                1. Dựa vào mã nguồn và logic thực tế của app để trả lời chính xác các câu hỏi về kỹ thuật, hàm số hoặc chức năng mà người dùng thắc mắc.
-                2. Chuyển hóa các thuật toán phức tạp thành ngôn ngữ đời sống, tâm lý hành vi và triết học nhân sinh (Sociological Translation).
-                3. PHẢI LUÔN SÒNG PHẢNG NHẮC NHỞ: Xổ số là ngẫu nhiên tuyệt đối, app là bộ lọc kỷ luật và quản trị cảm xúc chứ không hứa hẹn trúng thưởng.
-                """
-                
-                # LƯU Ý KỸ THUẬT: Khi triển khai thực tế trên Streamlit Cloud, anh có thể gọi Gemini SDK:
-                # import google.generativeai as genai
-                # genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                # model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=gemini_system_prompt)
-                # response = model.generate_content(user_query)
-                # ai_reply = response.text
-                
-                # PHẦN GIẢ LẬP THÔNG MINH (Hoặc sẵn sàng kết nối API thật qua st.secrets):
-                ai_reply = f"""
-                <b>[Gemini Context-Aware Engine Active]</b><br><br>
-                Dưới lăng kính phân tích mã nguồn của ứng dụng, câu hỏi <i>'{user_query}'</i> của bạn chạm trực tiếp đến cơ chế vận hành của hệ thống:<br><br>
-                • <b>Phân tích từ Code:</b> Ứng dụng đang quản lý qua cấu trúc lớp <code>PhongThuyReferenceCore</code> và <code>FlexibleCouncilEvaluator</code>, kết hợp đồng thời 3 hội đồng với trọng số chia đều để cân bằng dữ liệu.<br>
-                • <b>Góc nhìn Xã hội học:</b> Không có thuật toán nào can thiệp được vào lồng cầu quay thưởng. Hệ thống sinh ra để giúp bạn loại bỏ cảm tính FOMO, thay vào đó là một khung kỷ luật định lượng vững vàng.<br><br>
-                <i>(Để Gemini trả lời trực tiếp thời gian thực, anh chỉ cần cấu hình khóa <code>GEMINI_API_KEY</code> trong phần Secrets của Streamlit Cloud).</i>
-                """
-                
-                st.markdown(ai_reply, unsafe_allow_html=True)
-                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+            with st.spinner("Gemini đang đọc hiểu mã nguồn và phân tích thực tế..."):
+                try:
+                    import google.generativeai as genai
+                    
+                    api_key = st.secrets.get("GEMINI_API_KEY", "")
+                    if not api_key:
+                        st.error("⚠️ Chưa cấu hình GEMINI_API_KEY trong Streamlit Secrets!")
+                    else:
+                        genai.configure(api_key=api_key)
+                        
+                        gemini_system_prompt = """
+                        BẠN LÀ TRỢ LÝ AI KỸ THUẬT & XÃ HỘI HỌC CỦA ỨNG DỤNG 'Vietlott Harmony Edition v2.6'. 
+                        BẠN ĐÃ ĐƯỢC NẠP TOÀN BỘ MÃ NGUỒN VÀ HIỂU RÕ CÁC HÀM:
+                        - `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân.
+                        - `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố Hỏa/Thổ/Khí/Thủy, Phẩm tính Vận động Cardinal/Fixed/Mutable phân bổ dải số, và Hành tinh Đắc vị).
+                        - `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold theo tầm nhìn mẫu.
+                        
+                        QUY TẮC BẮT BUỘC:
+                        1. Trả lời thẳng vào câu hỏi của người dùng bằng cách trích dẫn trực tiếp logic hoặc tên hàm có thật trong mã nguồn ở trên.
+                        2. Dùng ngôn ngữ đời sống, tâm lý hành vi để giải thích (Sociological Translation).
+                        3. PHẢI LUÔN SÒNG PHẢNG NHẮC NHỞ: Xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật và quản trị cảm xúc chứ không dự đoán hay hứa hẹn trúng thưởng.
+                        """
+                        
+                        model = genai.GenerativeModel(
+                            model_name='gemini-1.5-flash',
+                            system_instruction=gemini_system_prompt
+                        )
+                        
+                        chat_session = model.start_chat(history=[])
+                        response = chat_session.send_message(user_query)
+                        ai_reply = response.text
+                        
+                        st.markdown(ai_reply, unsafe_allow_html=True)
+                        st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+                        
+                except Exception as e:
+                    st.error(f"Lỗi kết nối Gemini API: {e}")
 
 # =====================================================================
 # 🛡️ 9. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
