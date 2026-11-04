@@ -649,7 +649,7 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE DYNAMIC MODEL FALLBACK
+# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (FORCE FLASH MODEL TO AVOID QUOTA LIMITS)
 # =====================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện & Giải mã Toàn bộ Code & Thuật toán", expanded=False):
@@ -695,24 +695,25 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         3. PHẢI LUÔN SÒNG PHẢNG NHẮC NHỞ: Xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật và quản trị cảm xúc chứ không dự đoán hay hứa hẹn trúng thưởng.
                         """
                         
-                        # Tự động quét danh sách model khả dụng trong API Key
+                        # Lấy danh sách model khả dụng hỗ trợ generateContent
                         available_models = [
                             m.name for m in genai.list_models() 
                             if 'generateContent' in m.supported_generation_methods
                         ]
                         
-                        # Chọn model ưu tiên: flash -> pro -> bất kỳ model khả dụng nào
+                        # ⚠️ ÉP BUỘC ƯU TIÊN TUYỆT ĐỐI DÒNG FLASH ĐỂ TRÁNH DÙNG NHẦM DÒNG PRO GÂY LỖI QUOTA (429)
                         target_model = None
-                        for pref in ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-pro']:
-                            matched = [m for m in available_models if pref in m]
+                        for pref in ['flash', 'gemini-1.5-flash', 'gemini-2.0-flash']:
+                            matched = [m for m in available_models if pref in m.lower() and 'pro' not in m.lower()]
                             if matched:
                                 target_model = matched[0]
                                 break
                         
+                        # Nếu không tìm thấy flash, lấy model bất kỳ không chứa chữ pro
                         if not target_model:
-                            target_model = available_models[0] if available_models else 'gemini-1.5-flash'
+                            non_pro = [m for m in available_models if 'pro' not in m.lower()]
+                            target_model = non_pro[0] if non_pro else (available_models[0] if available_models else 'gemini-1.5-flash')
                         
-                        # Loại bỏ tiền tố 'models/' nếu thư viện tự bổ sung
                         model_name_clean = target_model.replace('models/', '')
                         
                         model = genai.GenerativeModel(
