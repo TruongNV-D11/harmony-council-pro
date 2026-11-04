@@ -649,7 +649,7 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (MODERN SDK COMPATIBLE)
+# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (DYNAMIC AUTO-DISCOVERY MODEL)
 # =====================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện & Giải mã Toàn bộ Code & Thuật toán", expanded=False):
@@ -695,29 +695,29 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         3. PHẢI LUÔN SÒNG PHẢNG NHẮC NHỞ: Xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật và quản trị cảm xúc chứ không dự đoán hay hứa hẹn trúng thưởng.
                         """
                         
-                        # Thử kết nối qua các định danh model chuẩn hiện hành phù hợp với AI Studio Key mới
-                        response = None
-                        last_err = None
-                        
-                        for candidate in ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro']:
-                            try:
-                                model = genai.GenerativeModel(
-                                    model_name=candidate,
-                                    system_instruction=gemini_system_prompt
-                                )
-                                response = model.generate_content(user_query)
-                                if response and response.text:
+                        # Tự động quét tìm model đầu tiên hỗ trợ generateContent từ API Key của tài khoản
+                        selected_model = None
+                        try:
+                            for m in genai.list_models():
+                                if 'generateContent' in m.supported_generation_methods:
+                                    selected_model = m.name
                                     break
-                            except Exception as ex:
-                                last_err = ex
-                                continue
-                                
-                        if response and response.text:
-                            ai_reply = response.text
-                            st.markdown(ai_reply, unsafe_allow_html=True)
-                            st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
-                        else:
-                            st.error(f"Không thể kết nối API. Chi tiết lỗi: {last_err}")
+                        except Exception:
+                            pass
+                        
+                        if not selected_model:
+                            selected_model = 'gemini-1.5-flash'
+
+                        model = genai.GenerativeModel(
+                            model_name=selected_model,
+                            system_instruction=gemini_system_prompt
+                        )
+                        
+                        response = model.generate_content(user_query)
+                        ai_reply = response.text
+                        
+                        st.markdown(ai_reply, unsafe_allow_html=True)
+                        st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
                         
                 except Exception as e:
                     st.error(f"Lỗi kết nối Gemini API: {e}")
