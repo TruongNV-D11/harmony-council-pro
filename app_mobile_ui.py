@@ -100,6 +100,15 @@ st.markdown("""
         margin-bottom: 15px;
         line-height: 1.6;
     }
+    .ai-assistant-box {
+        background: rgba(13, 27, 42, 0.85);
+        border-left: 4px solid #00E676;
+        padding: 18px;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-size: 14px;
+        line-height: 1.6;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -278,7 +287,6 @@ class PhongThuyReferenceCore:
             if remainder == 5: remainder = 8
             cung_phi = cung_phi_map.get(remainder, "Đoài (Kim)")
 
-        # Chiêm Tinh Cổ Điển: 12 Cung + Tứ đại Nguyên tố + Phẩm tính Vận động + Hành tinh Đắc vị
         zodiac_db = [
             ((3,21),(4,20), "Bạch Dương", "Hỏa", "Tiên phong (Cardinal)", "Sao Hỏa (Mars)"),
             ((4,21),(5,20), "Kim Ngưu", "Thổ", "Kiên định (Fixed)", "Sao Kim (Venus)"),
@@ -328,12 +336,6 @@ class FlexibleCouncilEvaluator:
 
     @staticmethod
     def judge_western_deep(num: int, max_main: int, element_west: str, modality: str) -> float:
-        """
-        Thuật toán Chiêm tinh Cổ điển 3 Tầng (Academic Western Engine):
-        1. Layer 1 (Tứ đại Nguyên tố): Đánh giá dạng cấu trúc số học (Số nguyên tố, bội số).
-        2. Layer 2 (Phẩm tính Modality): Đánh giá phân bổ vị trí dải số (Top/Mid/End Range).
-        3. Layer 3 (Hệ số Đắc vị Planet Weight): Thẩm định sóng dao động.
-        """
         score_elem = 0.5
         if element_west == "Hỏa":
             score_elem = 1.0 if (num % 3 == 0 or num in [1, 7, 11, 19, 23, 31, 37, 41, 47, 53]) else 0.4
@@ -341,19 +343,18 @@ class FlexibleCouncilEvaluator:
             score_elem = 1.0 if (num % 5 == 0 or num % 2 == 0) else 0.4
         elif element_west == "Khí":
             score_elem = 1.0 if (num % 4 == 0 or num % 7 == 0 or num in [2, 13, 17, 29, 31, 43]) else 0.4
-        else: # Thủy
+        else: 
             score_elem = 1.0 if (num % 2 != 0 or num % 6 == 0 or num in [3, 9, 15, 21, 27, 33, 39, 45, 51]) else 0.4
 
         score_mod = 0.5
         ratio = num / max_main
-        if "Tiên phong" in modality: # Cardinal: Ưu tiên dải số khởi đầu (0 - 35%)
+        if "Tiên phong" in modality: 
             score_mod = 1.0 if ratio <= 0.35 else 0.45
-        elif "Kiên định" in modality: # Fixed: Ưu tiên dải số tâm điểm (30% - 70%)
+        elif "Kiên định" in modality: 
             score_mod = 1.0 if 0.30 <= ratio <= 0.70 else 0.45
-        else: # Mutable: Ưu tiên dải số phát tiết biên ngoài (> 65%)
+        else: 
             score_mod = 1.0 if ratio >= 0.65 else 0.45
 
-        # Tổng hợp ma trận trọng số 2 tầng Chiêm tinh học
         return (score_elem * 0.65) + (score_mod * 0.35)
 
     @staticmethod
@@ -395,7 +396,7 @@ st.divider()
 # =====================================================================
 # 🎵 5. TRÌNH PHÁT NHẠC NỀN TỰ CHẠY (VIETLOTT-AUDIO / MUSIC_BG.MP3)
 # =====================================================================
-with st.expander("🎵 Trình phát Nhạc nền )", expanded=True):
+with st.expander("🎵 Trình phát Nhạc nền", expanded=True):
     st.caption("Trình phát âm thanh nhạc kinh điển KQXS từ kho `Vietlott-Audio` của bạn (Tự động phát khi tương tác):")
     
     audio_html = """
@@ -649,10 +650,71 @@ if run_clicked:
 
         time.sleep(0.5)
 
+    # Lưu trữ kết quả vào session_state để Trợ lý AI có ngữ cảnh bộ số mới nhất
+    st.session_state['latest_result'] = {
+        'numbers': results[0]['set'] if results else [],
+        'profile': profile
+    }
+
 st.divider()
 
 # =====================================================================
-# 🛡️ 8. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
+# 💬 8. HỘP CHỨC NĂNG AI: TRỢ LÝ XÃ HỘI HỌC (EXPANDABLE CHAT BOX)
+# =====================================================================
+st.markdown("<br>", unsafe_allow_html=True)
+with st.expander("🗣️ HỘP CHỨC NĂNG AI: Trò chuyện & Giải mã Học thuật (Hỏi về Cung Phi, Can Chi, Cơ chế...)", expanded=False):
+    st.markdown("""
+    <p style="color: #8C92A4; font-size: 13px; margin-bottom: 15px;">
+    Bạn có thắc mắc về ý nghĩa của các chỉ số, cơ chế cân bằng động, hay muốn hiểu sâu về bản chất xác suất? Đặt câu hỏi ở đây, Trợ lý AI sẽ giải thích bằng ngôn ngữ đời sống.
+    </p>
+    """, unsafe_allow_html=True)
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"], unsafe_allow_html=True)
+
+    if user_query := st.chat_input("Ví dụ: Cung Phi là gì và nó đang giúp gì ở đây?"):
+        st.session_state.chat_history.append({"role": "user", "content": user_query})
+        with st.chat_message("user"):
+            st.markdown(user_query)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Trợ lý AI đang chuyển ngữ sang lăng kính xã hội học..."):
+                query_lower = user_query.lower()
+                
+                if "cung phi" in query_lower:
+                    ai_reply = """
+                    <b>Cung Phi</b>, xét về mặt đời sống, giống như <i>'tần số tương tác tự nhiên'</i> của riêng bạn với môi trường xung quanh dựa trên thời điểm bạn sinh ra.<br><br>
+                    <b>Nó đang giúp gì ở đây?</b> Trong ứng dụng, Cung Phi đóng vai trò là một <b>Bộ lọc tương thích sinh học</b> thuộc Hội đồng Phương Đông. Nó giúp hệ thống lọc ra các con số có nhịp điệu hài hòa nhất với chu kỳ sinh học của bạn ngày hôm nay.<br><br>
+                    <i>⚠️ Tuy nhiên, trợ lý luôn sòng phẳng nhắc bạn: Không có Cung Phi nào bẻ gãy được sự ngẫu nhiên tuyệt đối của lồng cầu quay thưởng cả. Nó tồn tại để giúp bạn giữ kỷ luật và quản trị cảm xúc!</i>
+                    """
+                elif "cân bằng động" in query_lower or "hội đồng" in query_lower:
+                    ai_reply = """
+                    <b>Cơ chế Cân bằng động (Dynamic Balancer)</b> hoạt động giống như một cuộc hội thảo gồm 3 chuyên gia độc lập:<br>
+                    1. <b>Phương Đông:</b> Chuyên gia về nhịp sống tự nhiên & lịch pháp.<br>
+                    2. <b>Phương Tây:</b> Chuyên gia về chu kỳ tâm lý & phẩm tính chiêm tinh.<br>
+                    3. <b>Thống kê:</b> Chuyên gia về dữ liệu thực chiến lịch sử.<br><br>
+                    Không ông nào được quyền 'độc đoán'. Khi một yếu tố bị lệch pha, hai hội đồng còn lại sẽ tự động điều chỉnh trọng số để kéo lại điểm số cộng hưởng, đảm bảo sự an toàn và minh bạch.
+                    """
+                elif "ngẫu nhiên" in query_lower or "trúng" in query_lower or "xác suất" in query_lower:
+                    ai_reply = """
+                    <b>Bản chất cốt lõi:</b> Xổ số là một chuỗi các sự kiện <b>ngẫu nhiên tuyệt đối</b>. Không có thuật toán hay siêu máy tính nào có thể dự đoán chính xác 100%.<br><br>
+                    App sinh ra không phải để 'đoán số trúng', mà là một <b>bộ lọc định lượng và kỷ luật</b>. Nó giúp bạn thay vì chọn số theo cảm tính hên xui, thì tuân theo một khung cấu trúc học thuật rõ ràng để quản trị rủi ro và cảm xúc.
+                    """
+                else:
+                    ai_reply = f"""
+                    Dưới góc nhìn xã hội học và triết học xác suất, câu hỏi <i>'{user_query}'</i> thể hiện mong muốn tìm kiếm một phương pháp tiếp cận có kỷ luật.<br><br>
+                    Hệ thống luôn vận hành trên nguyên tắc sòng phẳng: Kết hợp logic học thuật đa chiều để lập danh sách tham khảo tối ưu nhất, đồng thời duy trì sự tỉnh táo trước bản chất ngẫu nhiên của trò chơi.
+                    """
+                
+                st.markdown(ai_reply, unsafe_allow_html=True)
+                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+
+# =====================================================================
+# 🛡️ 9. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
 # =====================================================================
 st.markdown("""
     <div class="watermark-box">
