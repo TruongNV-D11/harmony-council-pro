@@ -696,7 +696,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         """
                         
                         model = genai.GenerativeModel(
-                            model_name='gemini-2.5-flash', # <--- Hoặc dùng bản chuẩn mới nhất
+                            model_name='gemini-pro', # <--- Hoặc dùng bản chuẩn mới nhất
                             system_instruction=gemini_system_prompt
                         )
                         
