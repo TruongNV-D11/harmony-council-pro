@@ -257,6 +257,7 @@ class PhongThuyReferenceCore:
         menh = cls.NAP_AM_60[idx_60]
         menh_elem = menh.split()[-1].replace("Thuỷ", "Thủy")
         
+        # Thuật toán chuẩn Bát Trạch Lạc Thư cho Cung Phi (Phân định rõ thế kỷ 20 và 21)
         year_str = str(l_year)
         sum_digits = int(year_str[-2]) + int(year_str[-1])
         while sum_digits > 9:
@@ -269,13 +270,20 @@ class PhongThuyReferenceCore:
         }
         
         if gender.lower() == "nam":
-            remainder = 10 - sum_digits
+            if l_year < 2000:
+                remainder = 10 - sum_digits
+            else:
+                remainder = 9 - sum_digits
+            while remainder <= 0: remainder += 9
             if remainder == 5: remainder = 2
             cung_phi = cung_phi_map.get(remainder, "Cấn (Thổ)")
         else:
-            remainder = 5 + sum_digits
+            if l_year < 2000:
+                remainder = 5 + sum_digits
+            else:
+                remainder = 6 + sum_digits
             while remainder > 9:
-                remainder = remainder // 10 + remainder % 10
+                remainder = remainder - 9
             if remainder == 5: remainder = 8
             cung_phi = cung_phi_map.get(remainder, "Đoài (Kim)")
 
@@ -459,6 +467,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
     <div style="background-color: #1A1C23; border: 1px solid #1D976C; border-radius: 10px; padding: 15px; margin-top: 10px; line-height: 1.8;">
         📅 <b>Bản mệnh Đông phương (Chuẩn Lập Xuân):</b> {profile['can']} {profile['chi']} — <b>{profile['menh']}</b><br>
         🏛️ <b>Cung Mệnh (Cung Phi):</b> {profile['cung_phi']}<br>
+        <span style="font-size: 11px; color: #8C92A4;">💡 <i>Ghi chú: Cung Phi dịch chuyển theo chu kỳ thiên văn thế kỷ (Mốc trước/sau năm 2000).</i></span><br>
         🌟 <b>Chiêm tinh Phương Tây 3 Tầng:</b> Cung <b>{profile['western_sign']}</b><br>
         &nbsp;&nbsp;&nbsp;&nbsp;• <i>Tứ đại Nguyên tố:</i> <b>{profile['element_west']}</b> &nbsp;|&nbsp; <i>Phẩm tính:</i> <b>{profile['modality']}</b><br>
         &nbsp;&nbsp;&nbsp;&nbsp;• <i>Hành tinh chiếu mệnh:</i> <b>{profile['ruling_planet']}</b><br>
@@ -650,7 +659,7 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (DYNAMIC AUTO-DISCOVERY REST API)
+# 💬 8. HỘP CHỨC NĂNG AI: GEMINI ENGINE (DYNAMIC REST API AUTO-DISCOVERY)
 # =====================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện & Giải mã Toàn bộ Code & Thuật toán", expanded=False):
@@ -682,7 +691,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         gemini_system_prompt = """
                         BẠN LÀ TRỢ LÝ AI KỸ THUẬT & XÃ HỘI HỌC CỦA ỨNG DỤNG 'Vietlott Harmony Edition v2.6'. 
                         BẠN ĐÃ ĐƯỢC NẠP TOÀN BỘ MÃ NGUỒN VÀ HIỂU RÕ CÁC HÀM:
-                        - `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân.
+                        - `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (phân định rõ thế kỷ 20 và 21).
                         - `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố Hỏa/Thổ/Khí/Thủy, Phẩm tính Vận động Cardinal/Fixed/Mutable phân bổ dải số, và Hành tinh Đắc vị).
                         - `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold theo tầm nhìn mẫu.
                         
@@ -702,7 +711,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                             for m in models_data:
                                 name = m.get("name", "") # VD: "models/gemini-1.5-flash"
                                 methods = m.get("supportedGenerationMethods", [])
-                                if "generateContent" in methods:
+                                if "generateContent" in methods and "pro" not in name.lower():
                                     target_model_name = name.replace("models/", "")
                                     break
                         
