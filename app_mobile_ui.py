@@ -285,34 +285,37 @@ class PhongThuyReferenceCore:
         menh = cls.NAP_AM_60[idx_60]
         menh_elem = menh.split()[-1].replace("Thuỷ", "Thủy")
         
-        year_str = str(l_year)
-        sum_digits = int(year_str[-2]) + int(year_str[-1])
-        while sum_digits > 9:
-            sum_digits = sum_digits // 10 + sum_digits % 10
+        # Xử lý Cung Phi (Chỉ tính khi giới tính là Nam hoặc Nữ, nếu Không xác định thì bỏ qua)
+        cung_phi = "Không áp dụng (Trung hòa năng lượng bẩm sinh)"
+        if gender.lower() in ["nam", "nữ"]:
+            year_str = str(l_year)
+            sum_digits = int(year_str[-2]) + int(year_str[-1])
+            while sum_digits > 9:
+                sum_digits = sum_digits // 10 + sum_digits % 10
+                
+            cung_phi_map = {
+                1: "Khảm (Thủy)", 2: "Khôn (Thổ)", 3: "Chấn (Mộc)", 
+                4: "Tốn (Mộc)", 6: "Càn (Kim)", 7: "Đoài (Kim)", 
+                8: "Cấn (Thổ)", 9: "Ly (Hỏa)"
+            }
             
-        cung_phi_map = {
-            1: "Khảm (Thủy)", 2: "Khôn (Thổ)", 3: "Chấn (Mộc)", 
-            4: "Tốn (Mộc)", 6: "Càn (Kim)", 7: "Đoài (Kim)", 
-            8: "Cấn (Thổ)", 9: "Ly (Hỏa)"
-        }
-        
-        if gender.lower() == "nam":
-            if l_year < 2000:
-                remainder = 10 - sum_digits
+            if gender.lower() == "nam":
+                if l_year < 2000:
+                    remainder = 10 - sum_digits
+                else:
+                    remainder = 9 - sum_digits
+                while remainder <= 0: remainder += 9
+                if remainder == 5: remainder = 2
+                cung_phi = cung_phi_map.get(remainder, "Cấn (Thổ)")
             else:
-                remainder = 9 - sum_digits
-            while remainder <= 0: remainder += 9
-            if remainder == 5: remainder = 2
-            cung_phi = cung_phi_map.get(remainder, "Cấn (Thổ)")
-        else:
-            if l_year < 2000:
-                remainder = 5 + sum_digits
-            else:
-                remainder = 6 + sum_digits
-            while remainder > 9:
-                remainder = remainder - 9
-            if remainder == 5: remainder = 8
-            cung_phi = cung_phi_map.get(remainder, "Đoài (Kim)")
+                if l_year < 2000:
+                    remainder = 5 + sum_digits
+                else:
+                    remainder = 6 + sum_digits
+                while remainder > 9:
+                    remainder = remainder - 9
+                if remainder == 5: remainder = 8
+                cung_phi = cung_phi_map.get(remainder, "Đoài (Kim)")
 
         zodiac_db = [
             ((3,21),(4,20), "Bạch Dương", "Hỏa", "Tiên phong (Cardinal)", "Sao Hỏa (Mars)"),
@@ -425,7 +428,7 @@ st.markdown("""
 st.markdown("""
 <div class="academic-banner">
     <b>📜 TRÍCH YẾU HỌC THUẬT ỨNG DỤNG:</b><br>
-    • <b>Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp & Cung Phi Lạc Thư.<br>
+    • <b>Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp & Bản mệnh Nạp Âm (Tôn trọng sự đa dạng giới tính).<br>
     • <b>Phương Tây:</b> Chiêm tinh cổ điển 3 Tầng — Tứ đại Nguyên tố (Triplicities), Phẩm tính Vận động (Modalities: Cardinal/Fixed/Mutable) & Hành tinh Đắc vị.<br>
     • <b>Thống kê:</b> Ma trận tần suất lịch sử đa chiều (Chiến lược Hot / Neutral / Cold động).
 </div>
@@ -499,15 +502,17 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
         byear = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36)
     
     dob_str = f"{bday:02d}/{bmonth:02d}/{byear}"
-    gender = st.radio("Giới tính", ["Nam", "Nữ"], horizontal=True)
+    gender = st.radio("Giới tính", ["Nam", "Nữ", "Không xác định / Khác"], horizontal=True)
     
     profile = PhongThuyReferenceCore.get_full_info(dob_str, gender, draw_dt)
     
+    cung_phi_display_line = f"🏛️ <b>Cung Mệnh (Cung Phi):</b> {profile['cung_phi']}<br>" if gender != "Không xác định / Khác" else f"🏳️‍🌈 <b>Bản dạng giới:</b> Không xác định (Đã trung hòa năng lượng Cung Phi, giữ trọn vẹn Can Chi & Nạp Âm bẩm sinh)<br>"
+
     st.markdown(f"""
     <div style="background-color: #1A1C23; border: 1px solid #1D976C; border-radius: 10px; padding: 15px; margin-top: 10px; line-height: 1.8;">
         📅 <b>Bản mệnh Đông phương (Chuẩn Lập Xuân):</b> {profile['can']} {profile['chi']} — <b>{profile['menh']}</b><br>
-        🏛️ <b>Cung Mệnh (Cung Phi):</b> {profile['cung_phi']}<br>
-        <span style="font-size: 11px; color: #8C92A4;">💡 <i>Ghi chú: Cung Phi dịch chuyển theo chu kỳ thiên văn thế kỷ (Mốc trước/sau năm 2000).</i></span><br>
+        {cung_phi_display_line}
+        <span style="font-size: 11px; color: #8C92A4;">💡 <i>Ghi chú: Ứng dụng tôn trọng sự đa dạng giới và đảm bảo tính bình đẳng trong phân tích năng lượng học.</i></span><br>
         🌟 <b>Chiêm tinh Phương Tây 3 Tầng:</b> Cung <b>{profile['western_sign']}</b><br>
         &nbsp;&nbsp;&nbsp;&nbsp;• <i>Tứ đại Nguyên tố:</i> <b>{profile['element_west']}</b> &nbsp;|&nbsp; <i>Phẩm tính:</i> <b>{profile['modality']}</b><br>
         &nbsp;&nbsp;&nbsp;&nbsp;• <i>Hành tinh chiếu mệnh:</i> <b>{profile['ruling_planet']}</b><br>
@@ -601,7 +606,21 @@ if run_clicked:
     if use_west: active_councils.append("western")
     if use_stat: active_councils.append("statistics")
 
-    weight_per_council = 1.0 / len(active_councils) if active_councils else 1.0
+    # Phân bổ trọng số động mượt mà (Giảm nhẹ Phương Đông đúng 5% xuống 28.3% khi khuyết Cung Phi)
+    weights = {}
+    if active_councils:
+        if gender == "Không xác định / Khác" and "eastern" in active_councils:
+            weights["eastern"] = 0.283
+            remaining_weight = 0.717
+            other_councils = [c for c in active_councils if c != "eastern"]
+            if other_councils:
+                sub_weight = remaining_weight / len(other_councils)
+                for c in other_councils:
+                    weights[c] = sub_weight
+        else:
+            eq_weight = 1.0 / len(active_councils)
+            for c in active_councils:
+                weights[c] = eq_weight
 
     candidate_scores = []
     for num in range(1, max_main + 1):
@@ -610,13 +629,13 @@ if run_clicked:
 
         if "eastern" in active_councils:
             s_east = FlexibleCouncilEvaluator.judge_eastern(num, profile["menh_elem"])
-            total_score += s_east * weight_per_council
+            total_score += s_east * weights.get("eastern", 0)
         if "western" in active_councils:
             s_west = FlexibleCouncilEvaluator.judge_western_deep(num, max_main, profile["element_west"], profile["modality"])
-            total_score += s_west * weight_per_council
+            total_score += s_west * weights.get("western", 0)
         if "statistics" in active_councils:
             s_stat = FlexibleCouncilEvaluator.judge_statistics_hot_cold(num, freq_map, hc_strategy)
-            total_score += s_stat * weight_per_council
+            total_score += s_stat * weights.get("statistics", 0)
 
         candidate_scores.append((num, total_score, s_east * 100, s_west * 100, s_stat * 100))
 
@@ -634,6 +653,8 @@ if run_clicked:
         spec_num = rnd.randint(1, special_max) if has_special else None
         base_score = round(rnd.uniform(91.5, 99.4), 2)
         
+        detail_east_text = f"Can Chi {profile['can']} {profile['chi']} tương thích hành {profile['menh_elem']}." if gender == "Không xác định / Khác" else f"Can Chi {profile['can']} {profile['chi']} & Cung Phi {profile['cung_phi']} tương thích hành {profile['menh_elem']}."
+
         results.append({
             "set": chosen,
             "special": spec_num,
@@ -641,7 +662,7 @@ if run_clicked:
             "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
             "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
             "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
-            "detail_east": f"Can Chi {profile['can']} {profile['chi']} & Cung Phi {profile['cung_phi']} tương thích hành {profile['menh_elem']}.",
+            "detail_east": detail_east_text,
             "detail_west": f"Ma trận Chiêm Tinh 3 Tầng: Cung {profile['western_sign']} (Nguyên tố {profile['element_west']} | Phẩm tính {profile['modality']} | Chiếu mệnh {profile['ruling_planet']}).",
             "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
         })
@@ -731,8 +752,8 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         gemini_system_prompt = """
                         BẠN LÀ TRỢ LÝ AI KỸ THUẬT & XÃ HỘI HỌC CỦA ỨNG DỤNG 'Vietlott Harmony Edition v2.6'. 
                         BẠN ĐÃ ĐƯỢC NẠP TOÀN BỘ MÃ NGUỒN VÀ HIỂU RÕ CÁC HÀM:
-                        - `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (phân định rõ thế kỷ 20 và 21).
-                        - `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố Hỏa/Thổ/Khí/Thủy, Phẩm tính Vận động Cardinal/Fixed/Mutable phân bổ dải số, và Hành tinh Đắc vị).
+                        - `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (tôn trọng đa dạng giới tính: tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định).
+                        - `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố Hỏa/Thổ/Khí/Thủy, Phẩm tính Vận động, Hành tinh Đắc vị).
                         - `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold theo tầm nhìn mẫu.
                         
                         QUY TẮC BẮT BUỘC:
