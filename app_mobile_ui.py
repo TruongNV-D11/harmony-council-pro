@@ -526,7 +526,6 @@ class FlexibleCouncilEvaluator:
 st.markdown("### 🏛️ Vietlott Harmony Edition v2.6")
 st.caption("🔒 **ACADEMIC ENGINE ACTIVE** | Tích hợp Huyền học Đông - Tây 3 Tầng & Thống kê Định lượng")
 
-# Khối Tuyên ngôn Triết lý & Vận hành (Nổi bật ở đầu giao diện)
 st.markdown("""
     <div class="philosophy-banner">
         <div class="philosophy-title">
@@ -539,12 +538,15 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# Trích yếu học thuật đã được rà soát và tích hợp đầy đủ 100% tất cả các phân hệ nâng cấp
 st.markdown("""
 <div class="academic-banner">
-    <b>📜 TRÍCH YẾU HỌC THUẬT ỨNG DỤNG:</b><br>
-    • <b>Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp & Bản mệnh Nạp Âm (Tôn trọng sự đa dạng giới tính).<br>
-    • <b>Phương Tây:</b> Chiêm tinh cổ điển 3 Tầng — Tứ đại Nguyên tố (Triplicities), Phẩm tính Vận động (Modalities: Cardinal/Fixed/Mutable) & Hành tinh Đắc vị.<br>
-    • <b>Thống kê:</b> Ma trận tần suất lịch sử đa chiều (Chiến lược Hot / Neutral / Cold động).
+    <b>📜 TRÍCH YẾU HỌC THUẬT & HỆ THỐNG TÍCH HỢP:</b><br>
+    • <b>Hội đồng Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp, Bản mệnh Nạp Âm & Cung Phi Lạc Thư (Tôn trọng đa dạng giới tính với cơ chế trung hòa trọng số động).<br>
+    • <b>Hội đồng Phương Tây:</b> Chiêm tinh cổ điển 3 Tầng — Tứ đại Nguyên tố (Triplicities), Phẩm tính Vận động (Modalities: Cardinal/Fixed/Mutable) & Hành tinh Đắc vị.<br>
+    • <b>Hội đồng Thống kê Ma trận:</b> Phân tích tần suất lịch sử đa chiều với chiến lược động (Hot / Neutral / Cold) dựa trên tầm nhìn mẫu linh hoạt.<br>
+    • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia tư vấn hành vi độc lập theo thời điểm động tâm thực tế (Real-time VN_TZ) — phân định Vùng Cát / Bình / Bĩ làm lớp phanh an toàn quản trị vốn.<br>
+    • <b>Trợ lý AI Gemini Engine:</b> Tự động quét REST API model khả dụng để giải mã mã nguồn, luận giải thuật toán và cố vấn kỷ luật tài chính dưới lăng kính xã hội học.
 </div>
 """, unsafe_allow_html=True)
 
