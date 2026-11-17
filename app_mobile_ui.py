@@ -58,6 +58,11 @@ st.markdown("""
         margin: 4px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.6);
         font-size: 15px;
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.5); }
+        to { opacity: 1; transform: scale(1); }
     }
     .score-badge {
         background-color: #262936;
@@ -87,7 +92,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-# 📚 2. CƠ SỞ DỮ LIỆU & LÕI THAM CHIẾU PHONG THỦY CHÍNH THỐNG (LẬP XUÂN & 60 HOA GIÁP)
+# 📚 2. CƠ SỞ DỮ LIỆU & LÕI THAM CHIẾU PHONG THỦY CHÍNH THỐNG (LẬP XUÂN)
 # =====================================================================
 GAMES = {
     "5x35": {"label": "Lotto 5/35", "max_main": 35, "pick": 5},
@@ -99,7 +104,6 @@ class PhongThuyReferenceCore:
     CAN = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"]
     CHI = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"]
 
-    # Bảng tra cứu mốc Tiết Lập Xuân chuẩn thiên văn (Kinh độ mặt trời 315 độ)
     @staticmethod
     def get_solar_term_riping(year: int) -> datetime:
         solar_terms = {
@@ -138,21 +142,20 @@ class PhongThuyReferenceCore:
         user_dt = datetime(y, m, d, 12, 0)
         lap_xuan = cls.get_solar_term_riping(y)
         if user_dt < lap_xuan:
-            return y - 1  # Vẫn thuộc năm Âm lịch trước theo Lập Xuân
+            return y - 1
         return y
 
-    # Bảng 60 Hoa Giáp → Nạp Âm đầy đủ nguyên bản
     NAP_AM_60 = [
         "Hải Trung Kim", "Hải Trung Kim", "Lư Trung Hỏa", "Lư Trung Hỏa", "Đại Lâm Mộc", "Đại Lâm Mộc",
-        "Lộ Bàng Thổ", "Lộ Bàng Thổ", "Kiếm锋金", "Kiếm Phong Kim", "Sơn Đầu Hỏa", "Sơn Đầu Hỏa",
-        "Giản Hạ Thuỷ", "Giản Hạ Thủy", "Thành Thượng Thổ", "Thành Thượng Thổ", "Bạch Lạp Kim", "Bạch Lạp Kim",
-        "Dương Liễu Mộc", "Dương Liễu Mộc", "Tuyền Trung Thuỷ", "Tuyền Trung Thủy", "Ốc Thượng Thổ", "Ốc Thượng Thổ",
-        "Tích Lịch Hỏa", "Tích Lịch Hỏa", "Tùng Bách Mộc", "Tùng Bách Mộc", "Trường Lưu Thuỷ", "Trường Lưu Thủy",
+        "Lộ Bàng Thổ", "Lộ Bàng Thổ", "Kiếm Phong Kim", "Kiếm Phong Kim", "Sơn Đầu Hỏa", "Sơn Đầu Hỏa",
+        "Giản Hạ Thủy", "Giản Hạ Thủy", "Thành Thượng Thổ", "Thành Thượng Thổ", "Bạch Lạp Kim", "Bạch Lạp Kim",
+        "Dương Liễu Mộc", "Dương Liễu Mộc", "Tuyền Trung Thủy", "Tuyền Trung Thủy", "Ốc Thượng Thổ", "Ốc Thượng Thổ",
+        "Tích Lịch Hỏa", "Tích Lịch Hỏa", "Tùng Bách Mộc", "Tùng Bách Mộc", "Trường Lưu Thủy", "Trường Lưu Thủy",
         "Sa Trung Kim", "Sa Trung Kim", "Sơn Hạ Hỏa", "Sơn Hạ Hỏa", "Bình Địa Mộc", "Bình Địa Mộc",
         "Bích Thượng Thổ", "Bích Thượng Thổ", "Kim Bạch Kim", "Kim Bạch Kim", "Phúc Đăng Hỏa", "Phúc Đăng Hỏa",
-        "Thiên Hà Thuỷ", "Thiên Hà Thủy", "Đại Trạch Thổ", "Đại Trạch Thổ", "Thoa Xuyến Kim", "Thoa Xuyến Kim",
-        "Tang Đố Mộc", "Tang Đố Mộc", "Đại Khê Thuỷ", "Đại Khê Thủy", "Sa Trung Thổ", "Sa Trung Thổ",
-        "Thiên Thượng Hỏa", "Thiên Thượng Hỏa", "Thạch Lựu Mộc", "Thạch Lựu Mộc", "Đại Hải Thuỷ", "Đại Hải Thủy"
+        "Thiên Hà Thủy", "Thiên Hà Thủy", "Đại Trạch Thổ", "Đại Trạch Thổ", "Thoa Xuyến Kim", "Thoa Xuyến Kim",
+        "Tang Đố Mộc", "Tang Đố Mộc", "Đại Khê Thủy", "Đại Khê Thủy", "Sa Trung Thổ", "Sa Trung Thổ",
+        "Thiên Thượng Hỏa", "Thiên Thượng Hỏa", "Thạch Lựu Mộc", "Thạch Lựu Mộc", "Đại Hải Thủy", "Đại Hải Thủy"
     ]
 
     @classmethod
@@ -163,24 +166,20 @@ class PhongThuyReferenceCore:
         except:
             day, month, year = 2, 2, 1974
 
-        # Xác định năm Âm lịch chuẩn xác theo Tiết Lập Xuân
         l_year = cls.get_lunar_year_precise(year, month, day)
 
         can = cls.CAN[(l_year - 4) % 10]
         chi = cls.CHI[(l_year - 4) % 12]
 
-        # Tra cứu Nạp Âm chính xác từ chu kỳ 60 Hoa Giáp
         idx_60 = (l_year - 4) % 60
         menh_full = cls.NAP_AM_60[idx_60] if 0 <= idx_60 < len(cls.NAP_AM_60) else "Bình Địa Mộc"
 
-        # Lấy hành ngũ hành đại diện từ tên Nạp Âm
         if "Kim" in menh_full: menh_elem = "Kim"
         elif "Thủy" in menh_full or "Thuỷ" in menh_full: menh_elem = "Thủy"
         elif "Hỏa" in menh_full: menh_elem = "Hỏa"
         elif "Thổ" in menh_full: menh_elem = "Thổ"
         else: menh_elem = "Mộc"
 
-        # Bát Trạch Cung Phi chính thống theo công thức 10-N (Nam) và 5+N (Nữ)
         year_str = str(l_year)
         sum_digits = int(year_str[-2]) + int(year_str[-1])
         while sum_digits > 9:
@@ -203,12 +202,11 @@ class PhongThuyReferenceCore:
                 remainder = remainder // 10 + remainder % 10
             if remainder == 5: remainder = 8
             cung_menh = cung_map.get(remainder, "Đoài (Kim)")
-        else: # Không xác định / Khác (Lấy trung tính theo Nam)
+        else: # Không xác định / Khác (Quy về hằng số trung tính / Nam)
             remainder = 10 - sum_digits
             if remainder == 5: remainder = 2
-            cung_menh = cung_map.get(remainder, "Cấn (Thổ)")
+            cung_menh = cung_map.get(remainder, "Cấn (Thổ)") + " [Trung tính/Khác]"
 
-        # Cung Hoàng đạo Phương Tây (tính theo Dương lịch)
         western_sign = "Bảo Bình"
         if (month == 3 and day >= 21) or (month == 4 and day <= 19): western_sign = "Bạch Dương"
         elif (month == 4 and day >= 20) or (month == 5 and day <= 20): western_sign = "Kim Ngưu"
@@ -310,26 +308,17 @@ class MaiHoaDichSoCore:
             zone = "CAT"
             zone_label = "🟢 VÙNG CÁT — Thời điểm thuận lợi & Tâm thế vững vàng"
             summary = f"Dụng ({dung_elem}) tương sinh/tỷ hòa với Thể ({the_elem}). Nhịp năng lượng thời điểm hanh thông, tâm lý ổn định."
-            advice = (
-                "Bạn đang ở trạng thái tinh thần tỉnh táo và chủ động. Có thể cân nhắc tham gia trải nghiệm "
-                "trong đúng giới hạn ngân sách giải trí tối thiểu đã hoạch định từ trước, giữ tâm thế thoải mái và không lún sâu."
-            )
+            advice = "Bạn đang ở trạng thái tinh thần tỉnh táo và chủ động. Có thể cân nhắc tham gia trải nghiệm trong đúng giới hạn ngân sách giải trí tối thiểu đã hoạch định từ trước."
         elif cls.NGU_HANH_SINH.get(the_elem) == dung_elem or cls.NGU_HANH_KHAC.get(the_elem) == dung_elem:
             zone = "BINH"
             zone_label = "🟡 VÙNG BÌNH — Thời điểm trung lập & Cần tiết chế"
-            summary = f"Thể ({the_elem}) sinh xuất hoặc khắc chế Dụng ({dung_elem}). Vạn vật đang ở thế cân bằng tĩnh, dễ hao tâm lực."
-            advice = (
-                "Bối cảnh hiện tại phù hợp để quan sát dữ liệu và rèn luyện kỷ luật hơn là hành động mạnh. "
-                "Ưu tiên bảo toàn nguồn vốn cá nhân, chỉ nên tham gia ở mức tượng trưng hoặc tạm nghỉ ngơi."
-            )
+            summary = f"Thể ({the_elem}) sinh xuất hoặc khắc chế Dụng ({dung_elem}). Vạn vật đang ở thế cân bằng tĩnh."
+            advice = "Bối cảnh hiện tại phù hợp để quan sát dữ liệu và rèn luyện kỷ luật hơn là hành động mạnh. Ưu tiên bảo toàn nguồn vốn cá nhân."
         else:
             zone = "BI"
             zone_label = "🔴 VÙNG BĨ — Cảnh báo rủi ro & Cảm xúc dễ dao động"
-            summary = f"Dụng ({dung_elem}) khắc Thể ({the_elem}). Tín hiệu năng lượng cho thấy sự bất lợi khách quan hoặc tâm lý đang nóng vội."
-            advice = (
-                "KHUYẾN NGHỊ TỐI THƯỢNG: TẠM DỪNG THAM GIA! Đây là thời điểm nên đóng ngân sách, "
-                "giữ chặt nguồn vốn trong ví và dành thời gian nghỉ ngơi, tái tạo năng lượng. Sự tỉnh táo chính là tài sản lớn nhất."
-            )
+            summary = f"Dụng ({dung_elem}) khắc Thể ({the_elem}). Tín hiệu năng lượng cho thấy tâm lý đang nóng vội."
+            advice = "KHUYẾN NGHỊ TỐI THƯỢNG: TẠM DỪNG THAM GIA! Đóng ví ngay lập tức, giữ chặt nguồn vốn và dành thời gian nghỉ ngơi."
 
         que_chu_name = f"{cls.BAT_QUAI[thuong_id]['nature']} {cls.BAT_QUAI[ha_id]['nature']} ({cls.BAT_QUAI[thuong_id]['name']} trên - {cls.BAT_QUAI[ha_id]['name']} dưới)"
         que_bien_name = f"{cls.BAT_QUAI[thuong_bien_id]['nature']} {cls.BAT_QUAI[ha_bien_id]['nature']} ({cls.BAT_QUAI[thuong_bien_id]['name']} trên - {cls.BAT_QUAI[ha_bien_id]['name']} dưới)"
@@ -345,7 +334,6 @@ class MaiHoaDichSoCore:
             "summary": summary,
             "advice": advice
         }
-
 
 # =====================================================================
 # 🏛️ 3. LÕI HỘI ĐỒNG THẨM ĐỊNH ĐA CHIỀU (FLEXIBLE COUNCIL EVALUATOR)
@@ -397,7 +385,6 @@ class FlexibleCouncilEvaluator:
             diff = abs(normalized - 0.5)
             return max(0.2, 1.0 - (diff * 1.8))
 
-
 # =====================================================================
 # ⚡ 4. HỆ THỐNG CACHE LỊCH SỬ QUAY THƯỞNG (CACHED LOCAL ENGINE)
 # =====================================================================
@@ -414,7 +401,6 @@ def load_cached_history(game_key: str, sample_k: int):
             "mains": sorted(rnd.sample(range(1, max_val + 1), pick_num))
         })
     return mock_history
-
 
 # =====================================================================
 # 🏛️ 5. HEADER & BANNER
@@ -456,7 +442,6 @@ with st.expander("👤 Thiết lập Bản mệnh (Tiết Lập Xuân), Giới t
     with col_y:
         year = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36)
     
-    # Bổ sung đầy đủ 3 lựa chọn giới tính chính thống
     gender = st.radio(
         "⚧ Giới tính (Phục vụ định lượng Cung Mệnh Bát Trạch chuẩn thư tịch)", 
         options=["Nam", "Nữ", "Không xác định / Khác"], 
@@ -477,193 +462,4 @@ with st.expander("👤 Thiết lập Bản mệnh (Tiết Lập Xuân), Giới t
     
     hc_strategy = st.radio(
         "🎯 Khẩu vị Chiến lược Thống kê",
-        options=["🔥 Hot (Tần suất cao - Bắt nhịp xu hướng)", "⚖️ Neutral (Trung lập - Cân bằng nhịp)", "❄️ Cold (Tần suất thấp - Đón đầu đảo chiều)"],
-        index=0
-    )
-
-    st.markdown("---")
-    st.markdown("🔢 **Cấu hình Số lượng Bộ dữ liệu xuất ra:**")
-    num_rows = st.slider("Chọn số lượng dãy số phân tích", min_value=1, max_value=10, value=3, step=1)
-
-    st.markdown("---")
-    st.markdown("**🎛️ Bật/Tắt Hội đồng Định lượng (Chấm điểm bộ số):**")
-    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm / Bát Trạch Lập Xuân)", value=True)
-    use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo)", value=True)
-    use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# =====================================================================
-# 🚀 8. KÍCH HOẠT HỘI ĐỒNG VỚI HIỆU ỨNG TIẾN TRÌNH ĐỘNG
-# =====================================================================
-if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    status_text.text(f"🔄 Đang nạp tầm nhìn {horizon_samples} kỳ quay lịch sử vào bộ nhớ Smart Cache...")
-    progress_bar.progress(15)
-    time.sleep(0.3)
-
-    if use_east:
-        status_text.text(f"🏛️ Hội đồng Phương Đông: Đang chiếu xạ Tiết Lập Xuân, Can Chi và Bát Trạch cho mệnh {profile['can']} {profile['chi']}...")
-        progress_bar.progress(40)
-        time.sleep(0.4)
-
-    if use_west:
-        status_text.text(f"🌟 Hội đồng Phương Tây: Đang ánh xạ Cung Hoàng đạo {profile['western_sign']} và Tứ đại Nguyên tố...")
-        progress_bar.progress(70)
-        time.sleep(0.4)
-
-    if use_stat:
-        strategy_name = hc_strategy.split(" ")[1]
-        status_text.text(f"📊 Hội đồng Thống kê: Đang rà soát ma trận tần suất với chiến lược {strategy_name}...")
-        progress_bar.progress(90)
-        time.sleep(0.4)
-
-    status_text.text("✅ Hoàn tất quá trình cộng hưởng đa chiều!")
-    progress_bar.progress(100)
-    time.sleep(0.2)
-    
-    progress_bar.empty()
-    status_text.empty()
-
-    st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH ĐỊNH LƯỢNG ({num_rows} BỘ SỐ - CHIẾN LƯỢC: {hc_strategy.split(' ')[1].upper()})")
-
-    history_data = load_cached_history(game_key, horizon_samples)
-
-    game_cfg = GAMES[game_key]
-    max_main = game_cfg["max_main"]
-    pick_count = game_cfg["pick"]
-
-    freq_map = {i: 0 for i in range(1, max_main + 1)}
-    for row in history_data:
-        for num in row.get("mains", []):
-            if 1 <= num <= max_main:
-                freq_map[num] += 1
-
-    active_councils = []
-    if use_east: active_councils.append("eastern")
-    if use_west: active_councils.append("western")
-    if use_stat: active_councils.append("statistics")
-
-    weight_per_council = 1.0 / len(active_councils) if active_councils else 1.0
-
-    candidate_scores = []
-    for num in range(1, max_main + 1):
-        total_score = 0.0
-        s_east, s_west, s_stat = 0.5, 0.5, 0.5
-
-        if "eastern" in active_councils:
-            s_east = FlexibleCouncilEvaluator.judge_eastern(num, profile["menh_elem"])
-            total_score += s_east * weight_per_council
-        if "western" in active_councils:
-            s_west = FlexibleCouncilEvaluator.judge_western(num, profile["western_sign"])
-            total_score += s_west * weight_per_council
-        if "statistics" in active_councils:
-            s_stat = FlexibleCouncilEvaluator.judge_statistics_hot_cold(num, freq_map, hc_strategy)
-            total_score += s_stat * weight_per_council
-
-        candidate_scores.append((num, total_score, s_east * 100, s_west * 100, s_stat * 100))
-
-    candidate_scores.sort(key=lambda x: x[1], reverse=True)
-    top_pool = [item[0] for item in candidate_scores[:max(int(max_main * 0.6), pick_count + 5)]]
-
-    results = []
-    rnd = random.Random()
-    for i in range(1, num_rows + 1):
-        if len(top_pool) >= pick_count:
-            chosen = sorted(rnd.sample(top_pool, pick_count))
-        else:
-            chosen = sorted(rnd.sample(range(1, max_main + 1), pick_count))
-        
-        base_score = round(rnd.uniform(91.0, 99.2), 2)
-        results.append({
-            "set": chosen,
-            "score": base_score,
-            "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
-            "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
-            "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
-            "detail_east": f"Năng lượng Can Chi Lập Xuân {profile['can']} {profile['chi']} ({profile['gender']}) - Cung {profile['cung_menh']}.",
-            "detail_west": f"Cộng hưởng sóng nguyên tố cung hoàng đạo {profile['western_sign']}.",
-            "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
-        })
-
-    for idx, res in enumerate(results, 1):
-        balls_html = "".join([f'<div class="ball-number">{num:02d}</div>' for num in res['set']])
-        
-        st.markdown(f"""
-        <div class="council-card">
-            <span class="score-badge">Harmony Score: {res['score']}%</span>
-            <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game_label})</b><br><br>
-            <div style="margin-bottom: 12px;">
-                {balls_html}
-            </div>
-            <hr style="border-color: #2A2D3A; margin: 12px 0;">
-            <div class="sub-metric">
-                <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
-                <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
-                <b>📊 Hội đồng Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-st.divider()
-
-# =====================================================================
-# 🌸 9B. TRẠM MAI HOA DỊCH SỐ — CHUYÊN GIA TƯ VẤN HÀNH VI (ĐẶT Ở PHÍA DƯỚI)
-# =====================================================================
-with st.expander("🌸 Mai Hoa Dịch Số — Trạm Chiêm Nghiệm Thời Vận & Kỷ Luật (Tư vấn Hành vi)", expanded=False):
-    st.markdown(
-        "<div style='font-size: 13.5px; color: #C5CAE9; margin-bottom: 10px;'>"
-        "<b>📖 Vai trò & Học thuật:</b> Sau khi xem xét các bộ số định lượng, mô-đun này cung cấp một góc nhìn tham vấn "
-        "về thời vận dựa trên phương pháp <i>Mai Hoa Dịch Số</i> theo thời điểm động tâm thực tế. "
-        "<b>Đứng độc lập hoàn toàn</b>, đây là lớp phanh an toàn giúp đánh giá nhịp sinh học tài chính và tâm lý kỷ luật của bạn."
-        "</div>",
-        unsafe_allow_html=True
-    )
-
-    if "dong_tam_time" not in st.session_state:
-        st.session_state["dong_tam_time"] = datetime.now()
-
-    if st.button("🧭 Khởi Tạo Quẻ Thời Vận Hiện Tại (Lấy Thời Điểm Động Tâm)", key="btn_mai_hoa_bottom"):
-        st.session_state["dong_tam_time"] = datetime.now()
-
-    iching_res = MaiHoaDichSoCore.cast_hexagram(st.session_state["dong_tam_time"])
-
-    st.markdown(f"""
-    <div class="iching-card">
-        <div style="font-size: 13px; color: #D4AF37; font-weight: bold; margin-bottom: 6px;">
-            ⏳ Thời điểm động tâm: {iching_res['timestamp']} • Giờ {iching_res['chi_gio']}
-        </div>
-        <div style="font-size: 14px; color: #FAFAFA; line-height: 1.6;">
-            • <b>Quẻ Chủ:</b> {iching_res['que_chu']}<br>
-            • <b>Hào Động:</b> {iching_res['hao_dong']}<br>
-            • <b>Quẻ Biến:</b> {iching_res['que_bien']}
-        </div>
-        <hr style="border-color: #2E3446; margin: 10px 0;">
-        <div style="font-size: 15px; font-weight: bold; margin-bottom: 6px;">
-            {iching_res['zone_label']}
-        </div>
-        <div style="font-size: 13px; color: #B0BEC5; margin-bottom: 8px;">
-            <i>Luận giải Thể - Dụng:</i> {iching_res['summary']}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if iching_res["zone"] == "CAT":
-        st.success(f"💡 **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
-    elif iching_res["zone"] == "BINH":
-        st.warning(f"⚖️ **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
-    else:
-        st.error(f"🛡️ **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
-
-# =====================================================================
-# 🛡️ 10. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
-# =====================================================================
-st.markdown("""
-    <div class="watermark-box">
-        <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
-        <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
-        <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng thiên văn Lập Xuân & Kỷ luật hành vi • Cached Memory Active</p>
-    </div>
-""", unsafe_allow_html=True)
+        options=["🔥 Hot (Tần suất cao - Bắt nhịp xu hướng)", "⚖️ Neutral (Trung lập
