@@ -832,7 +832,7 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 🌸 8. TRẠM MAI HOA DỊCH SỐ — CHUYÊN GIA TƯ VẤN HÀNH VI (ĐẶT Ở PHÍA DƯỚI)
+# 🌸 8. TRẠM MAI HOA DỊCH SỐ — CHUYÊN GIA TƯ VẤN HÀNH VI (REAL-TIME UPDATE)
 # =====================================================================
 with st.expander("🌸 Mai Hoa Dịch Số — Trạm Chiêm Nghiệm Thời Vận & Kỷ Luật (Tư vấn Hành vi)", expanded=False):
     st.markdown(
@@ -844,18 +844,17 @@ with st.expander("🌸 Mai Hoa Dịch Số — Trạm Chiêm Nghiệm Thời V�
         unsafe_allow_html=True
     )
 
-    if "dong_tam_time" not in st.session_state:
-        st.session_state["dong_tam_time"] = datetime.now()
-
-    if st.button("🧭 Khởi Tạo Quẻ Thời Vận Hiện Tại (Lấy Thời Điểm Động Tâm)", key="btn_mai_hoa_bottom"):
-        st.session_state["dong_tam_time"] = datetime.now()
+    if st.button("🧭 Khởi Tạo Quẻ Thời Vận Hiện Tại (Lấy Thời Điểm Động Tâm Real-time)", key="btn_mai_hoa_bottom"):
+        st.session_state["dong_tam_time"] = now_vn()
+    elif "dong_tam_time" not in st.session_state:
+        st.session_state["dong_tam_time"] = now_vn()
 
     iching_res = MaiHoaDichSoCore.cast_hexagram(st.session_state["dong_tam_time"])
 
     st.markdown(f"""
     <div class="iching-card">
         <div style="font-size: 13px; color: #D4AF37; font-weight: bold; margin-bottom: 6px;">
-            ⏳ Thời điểm động tâm: {iching_res['timestamp']} • Giờ {iching_res['chi_gio']}
+            ⏳ Thời điểm động tâm (Real-time): {iching_res['timestamp']} • Giờ {iching_res['chi_gio']}
         </div>
         <div style="font-size: 14px; color: #FAFAFA; line-height: 1.6;">
             • <b>Quẻ Chủ:</b> {iching_res['que_chu']}<br>
@@ -917,7 +916,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         - `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (tôn trọng đa dạng giới tính: tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định).
                         - `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố Hỏa/Thổ/Khí/Thủy, Phẩm tính Vận động, Hành tinh Đắc vị).
                         - `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold theo tầm nhìn mẫu.
-                        - `MaiHoaDichSoCore`: Trạm chiêm nghiệm Mai Hoa Dịch Số đánh giá thời vận (Cát/Bình/Bĩ) và kỷ luật quản trị vốn.
+                        - `MaiHoaDichSoCore`: Trạm chiêm nghiệm Mai Hoa Dịch Số đánh giá thời vận (Cát/Bình/Bĩ) và kỷ luật quản trị vốn real-time.
                         
                         QUY TẮC BẮT BUỘC:
                         1. Trả lời thẳng vào câu hỏi của người dùng bằng cách trích dẫn trực tiếp logic hoặc tên hàm có thật trong mã nguồn ở trên.
