@@ -436,18 +436,18 @@ class MaiHoaDichSoCore:
         if the_elem == dung_elem or cls.NGU_HANH_SINH.get(dung_elem) == the_elem:
             zone = "CAT"
             zone_label = "🟢 VÙNG CÁT — Thời điểm thuận lợi & Tâm thế vững vàng"
-            summary = f"Dụng ({dung_elem}) tương sinh/tỷ hòa với Thể ({the_elem}). Nhịp năng lượng thời điểm hanh thông, tâm lý ổn định."
-            advice = "Bạn đang ở trạng thái tinh thần tỉnh táo và chủ động. Có thể cân nhắc tham gia trải nghiệm trong đúng giới hạn ngân sách giải trí tối thiểu đã hoạch định từ trước."
+            summary = f"Dụng ({dung_elem}) tương sinh/tỷ hòa với Thể ({the_elem}). Nhịp năng lượng thời điểm hanh thông, nội ngoại đồng thuận."
+            advice = "Tham gia với ngân sách chủ động và quản trị nguồn vốn hợp lý, đảm bảo tuyệt đối không ảnh hưởng tới tài chính cá nhân hoặc gia đình."
         elif cls.NGU_HANH_SINH.get(the_elem) == dung_elem or cls.NGU_HANH_KHAC.get(the_elem) == dung_elem:
             zone = "BINH"
             zone_label = "🟡 VÙNG BÌNH — Thời điểm trung lập & Cần tiết chế"
-            summary = f"Thể ({the_elem}) sinh xuất hoặc khắc chế Dụng ({dung_elem}). Vạn vật đang ở thế cân bằng tĩnh."
-            advice = "Bối cảnh hiện tại phù hợp để quan sát dữ liệu và rèn luyện kỷ luật hơn là hành động mạnh. Ưu tiên bảo toàn nguồn vốn cá nhân."
+            summary = f"Thể ({the_elem}) sinh xuất hoặc khắc chế Dụng ({dung_elem}). Vạn vật ở thế cân bằng tĩnh, cần quan sát kỹ lưỡng."
+            advice = "Bối cảnh hiện tại phù hợp để quan sát dữ liệu và rèn luyện kỷ luật hơn là hành động mạnh. Ưu tiên bảo toàn lực lượng."
         else:
             zone = "BI"
             zone_label = "🔴 VÙNG BĨ — Cảnh báo rủi ro & Cảm xúc dễ dao động"
-            summary = f"Dụng ({dung_elem}) khắc Thể ({the_elem}). Tín hiệu năng lượng cho thấy tâm lý đang nóng vội."
-            advice = "KHUYẾN NGHỊ TỐI THƯỢNG: TẠM DỪNG THAM GIA! Đóng ví ngay lập tức, giữ chặt nguồn vốn và dành thời gian nghỉ ngơi."
+            summary = f"Dụng ({dung_elem}) khắc Thể ({the_elem}). Tín hiệu tượng quẻ cho thấy năng lượng xung đột và tâm lý nóng vội."
+            advice = "KHUYẾN NGHỊ TỐI THƯỢNG: TẠM DỪNG THAM GIA! Đóng ví ngay lập tức, giữ chặt nguồn vốn và tuyệt đối không phát sinh chi phí mạo hiểm."
 
         que_chu_name = f"{cls.BAT_QUAI[thuong_id]['nature']} {cls.BAT_QUAI[ha_id]['nature']} ({cls.BAT_QUAI[thuong_id]['name']} trên - {cls.BAT_QUAI[ha_id]['name']} dưới)"
         que_bien_name = f"{cls.BAT_QUAI[thuong_bien_id]['nature']} {cls.BAT_QUAI[ha_bien_id]['nature']} ({cls.BAT_QUAI[thuong_bien_id]['name']} trên - {cls.BAT_QUAI[ha_bien_id]['name']} dưới)"
@@ -538,14 +538,13 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Trích yếu học thuật đã được rà soát và tích hợp đầy đủ 100% tất cả các phân hệ nâng cấp
 st.markdown("""
 <div class="academic-banner">
     <b>📜 TRÍCH YẾU HỌC THUẬT & HỆ THỐNG TÍCH HỢP:</b><br>
     • <b>Hội đồng Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp, Bản mệnh Nạp Âm & Cung Phi Lạc Thư (Tôn trọng đa dạng giới tính với cơ chế trung hòa trọng số động).<br>
     • <b>Hội đồng Phương Tây:</b> Chiêm tinh cổ điển 3 Tầng — Tứ đại Nguyên tố (Triplicities), Phẩm tính Vận động (Modalities: Cardinal/Fixed/Mutable) & Hành tinh Đắc vị.<br>
     • <b>Hội đồng Thống kê Ma trận:</b> Phân tích tần suất lịch sử đa chiều với chiến lược động (Hot / Neutral / Cold) dựa trên tầm nhìn mẫu linh hoạt.<br>
-    • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia tư vấn hành vi độc lập theo thời điểm động tâm thực tế (Real-time VN_TZ) — phân định Vùng Cát / Bình / Bĩ làm lớp phanh an toàn quản trị vốn.<br>
+    • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia tư vấn hành vi độc lập theo thời điểm động tâm thực tế (Real-time VN_TZ) — phân định Vùng Cát / Bình / Bĩ gắn liền trạng thái quẻ Thể-Dụng làm lớp phanh an toàn quản trị vốn.<br>
     • <b>Trợ lý AI Gemini Engine:</b> Tự động quét REST API model khả dụng để giải mã mã nguồn, luận giải thuật toán và cố vấn kỷ luật tài chính dưới lăng kính xã hội học.
 </div>
 """, unsafe_allow_html=True)
@@ -919,7 +918,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         - `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (tôn trọng đa dạng giới tính: tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định).
                         - `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố Hỏa/Thổ/Khí/Thủy, Phẩm tính Vận động, Hành tinh Đắc vị).
                         - `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold theo tầm nhìn mẫu.
-                        - `MaiHoaDichSoCore`: Trạm chiêm nghiệm Mai Hoa Dịch Số đánh giá thời vận (Cát/Bình/Bĩ) và kỷ luật quản trị vốn real-time.
+                        - `MaiHoaDichSoCore`: Trạm chiêm nghiệm Mai Hoa Dịch Số đánh giá thời vận (Cát/Bình/Bĩ) và kỷ luật quản trị vốn real-time gắn liền với trạng thái quẻ.
                         
                         QUY TẮC BẮT BUỘC:
                         1. Trả lời thẳng vào câu hỏi của người dùng bằng cách trích dẫn trực tiếp logic hoặc tên hàm có thật trong mã nguồn ở trên.
