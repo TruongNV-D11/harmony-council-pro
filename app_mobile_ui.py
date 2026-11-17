@@ -526,6 +526,7 @@ class FlexibleCouncilEvaluator:
 st.markdown("### 🏛️ Vietlott Harmony Edition v2.6")
 st.caption("🔒 **ACADEMIC ENGINE ACTIVE** | Tích hợp Huyền học Đông - Tây 3 Tầng & Thống kê Định lượng")
 
+# Khối Tuyên ngôn Triết lý & Vận hành (Nổi bật ở đầu giao diện)
 st.markdown("""
     <div class="philosophy-banner">
         <div class="philosophy-title">
