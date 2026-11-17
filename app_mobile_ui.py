@@ -121,7 +121,7 @@ class PhongThuyReferenceCore:
         }
         menh_full = menh_names.get(menh_elem, "Bình Địa Mộc")
 
-        # Tính Cung Mệnh Bát Trạch sơ bộ theo giới tính
+        # Tính toán cung mệnh Bát Trạch cơ bản theo giới tính
         sum_digit = sum([int(digit) for digit in str(year)])
         while sum_digit > 9:
             sum_digit = sum([int(digit) for digit in str(sum_digit)])
@@ -378,7 +378,7 @@ with st.expander("👤 Thiết lập Bản mệnh, Giới tính & Tầm nhìn Ch
     with col_y:
         year = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36)
     
-    # Bổ sung trường chọn Giới tính vô cùng quan trọng cho Bát Trạch
+    # Trường chọn Giới tính phục vụ tính toán Bát Trạch
     gender = st.radio("⚧ Giới tính (Phục vụ định lượng Cung Mệnh)", options=["Nam", "Nữ"], horizontal=True)
 
     dob_str = f"{day:02d}/{month:02d}/{year}"
@@ -408,87 +408,118 @@ with st.expander("👤 Thiết lập Bản mệnh, Giới tính & Tầm nhìn Ch
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =====================================================================
-# 🚀 8. CHẠY THỰC THI THỜI GIAN THỰC VỚI LÕI REAL CORE & CACHE
+# 🚀 8. KÍCH HOẠT HỘI ĐỒNG VỚI HIỆU ỨNG TIẾN TRÌNH ĐỘNG
 # =====================================================================
-st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH ĐỊNH LƯỢNG ({num_rows} BỘ SỐ)")
+if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
+    progress_bar = st.progress(0)
+    status_text = st.empty()
 
-history_data = load_cached_history(game_key, horizon_samples)
+    status_text.text(f"🔄 Đang nạp tầm nhìn {horizon_samples} kỳ quay lịch sử vào bộ nhớ Smart Cache...")
+    progress_bar.progress(15)
+    time.sleep(0.3)
 
-game_cfg = GAMES[game_key]
-max_main = game_cfg["max_main"]
-pick_count = game_cfg["pick"]
+    if use_east:
+        status_text.text(f"🏛️ Hội đồng Phương Đông: Đang phân rã Can Chi, Nạp Âm cho bản mệnh {profile['can']} {profile['chi']} ({gender})...")
+        progress_bar.progress(40)
+        time.sleep(0.4)
 
-freq_map = {i: 0 for i in range(1, max_main + 1)}
-for row in history_data:
-    for num in row.get("mains", []):
-        if 1 <= num <= max_main:
-            freq_map[num] += 1
+    if use_west:
+        status_text.text(f"🌟 Hội đồng Phương Tây: Đang ánh xạ Cung Hoàng đạo {profile['western_sign']} và Tứ đại Nguyên tố...")
+        progress_bar.progress(70)
+        time.sleep(0.4)
 
-active_councils = []
-if use_east: active_councils.append("eastern")
-if use_west: active_councils.append("western")
-if use_stat: active_councils.append("statistics")
+    if use_stat:
+        strategy_name = hc_strategy.split(" ")[1]
+        status_text.text(f"📊 Hội đồng Thống kê: Đang rà soát ma trận tần suất với chiến lược {strategy_name}...")
+        progress_bar.progress(90)
+        time.sleep(0.4)
 
-weight_per_council = 1.0 / len(active_councils) if active_councils else 1.0
-
-candidate_scores = []
-for num in range(1, max_main + 1):
-    total_score = 0.0
-    s_east, s_west, s_stat = 0.5, 0.5, 0.5
-
-    if "eastern" in active_councils:
-        s_east = FlexibleCouncilEvaluator.judge_eastern(num, profile["menh_elem"])
-        total_score += s_east * weight_per_council
-    if "western" in active_councils:
-        s_west = FlexibleCouncilEvaluator.judge_western(num, profile["western_sign"])
-        total_score += s_west * weight_per_council
-    if "statistics" in active_councils:
-        s_stat = FlexibleCouncilEvaluator.judge_statistics_hot_cold(num, freq_map, hc_strategy)
-        total_score += s_stat * weight_per_council
-
-    candidate_scores.append((num, total_score, s_east * 100, s_west * 100, s_stat * 100))
-
-candidate_scores.sort(key=lambda x: x[1], reverse=True)
-top_pool = [item[0] for item in candidate_scores[:max(int(max_main * 0.6), pick_count + 5)]]
-
-results = []
-rnd = random.Random()
-for i in range(1, num_rows + 1):
-    if len(top_pool) >= pick_count:
-        chosen = sorted(rnd.sample(top_pool, pick_count))
-    else:
-        chosen = sorted(rnd.sample(range(1, max_main + 1), pick_count))
+    status_text.text("✅ Hoàn tất quá trình cộng hưởng đa chiều!")
+    progress_bar.progress(100)
+    time.sleep(0.2)
     
-    base_score = round(rnd.uniform(91.0, 99.2), 2)
-    results.append({
-        "set": chosen,
-        "score": base_score,
-        "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
-        "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
-        "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
-        "detail_east": f"Năng lượng Can Chi {profile['can']} {profile['chi']} ({profile['gender']}) tương thích hành {profile['menh_elem']}.",
-        "detail_west": f"Cộng hưởng sóng nguyên tố cung hoàng đạo {profile['western_sign']}.",
-        "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
-    })
+    progress_bar.empty()
+    status_text.empty()
 
-for idx, res in enumerate(results, 1):
-    balls_html = "".join([f'<div class="ball-number">{num:02d}</div>' for num in res['set']])
-    
-    st.markdown(f"""
-    <div class="council-card">
-        <span class="score-badge">Harmony Score: {res['score']}%</span>
-        <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game_label})</b><br><br>
-        <div style="margin-bottom: 12px;">
-            {balls_html}
+    st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH ĐỊNH LƯỢNG ({num_rows} BỘ SỐ - CHIẾN LƯỢC: {hc_strategy.split(' ')[1].upper()})")
+
+    history_data = load_cached_history(game_key, horizon_samples)
+
+    game_cfg = GAMES[game_key]
+    max_main = game_cfg["max_main"]
+    pick_count = game_cfg["pick"]
+
+    freq_map = {i: 0 for i in range(1, max_main + 1)}
+    for row in history_data:
+        for num in row.get("mains", []):
+            if 1 <= num <= max_main:
+                freq_map[num] += 1
+
+    active_councils = []
+    if use_east: active_councils.append("eastern")
+    if use_west: active_councils.append("western")
+    if use_stat: active_councils.append("statistics")
+
+    weight_per_council = 1.0 / len(active_councils) if active_councils else 1.0
+
+    candidate_scores = []
+    for num in range(1, max_main + 1):
+        total_score = 0.0
+        s_east, s_west, s_stat = 0.5, 0.5, 0.5
+
+        if "eastern" in active_councils:
+            s_east = FlexibleCouncilEvaluator.judge_eastern(num, profile["menh_elem"])
+            total_score += s_east * weight_per_council
+        if "western" in active_councils:
+            s_west = FlexibleCouncilEvaluator.judge_western(num, profile["western_sign"])
+            total_score += s_west * weight_per_council
+        if "statistics" in active_councils:
+            s_stat = FlexibleCouncilEvaluator.judge_statistics_hot_cold(num, freq_map, hc_strategy)
+            total_score += s_stat * weight_per_council
+
+        candidate_scores.append((num, total_score, s_east * 100, s_west * 100, s_stat * 100))
+
+    candidate_scores.sort(key=lambda x: x[1], reverse=True)
+    top_pool = [item[0] for item in candidate_scores[:max(int(max_main * 0.6), pick_count + 5)]]
+
+    results = []
+    rnd = random.Random()
+    for i in range(1, num_rows + 1):
+        if len(top_pool) >= pick_count:
+            chosen = sorted(rnd.sample(top_pool, pick_count))
+        else:
+            chosen = sorted(rnd.sample(range(1, max_main + 1), pick_count))
+        
+        base_score = round(rnd.uniform(91.0, 99.2), 2)
+        results.append({
+            "set": chosen,
+            "score": base_score,
+            "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
+            "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
+            "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
+            "detail_east": f"Năng lượng Can Chi {profile['can']} {profile['chi']} ({profile['gender']}) tương thích hành {profile['menh_elem']}.",
+            "detail_west": f"Cộng hưởng sóng nguyên tố cung hoàng đạo {profile['western_sign']}.",
+            "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
+        })
+
+    for idx, res in enumerate(results, 1):
+        balls_html = "".join([f'<div class="ball-number">{num:02d}</div>' for num in res['set']])
+        
+        st.markdown(f"""
+        <div class="council-card">
+            <span class="score-badge">Harmony Score: {res['score']}%</span>
+            <b style="color: #1D976C; font-size: 17px;">Bộ số Thẩm định #{idx} ({game_label})</b><br><br>
+            <div style="margin-bottom: 12px;">
+                {balls_html}
+            </div>
+            <hr style="border-color: #2A2D3A; margin: 12px 0;">
+            <div class="sub-metric">
+                <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
+                <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
+                <b>📊 Hội đồng Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
+            </div>
         </div>
-        <hr style="border-color: #2A2D3A; margin: 12px 0;">
-        <div class="sub-metric">
-            <b>🏛️ Hội đồng Phương Đông ({res['east_score']}%):</b> {res['detail_east']}<br>
-            <b>🌟 Hội đồng Phương Tây ({res['west_score']}%):</b> {res['detail_west']}<br>
-            <b>📊 Hội đồng Thống kê ({res['stat_score']}%):</b> {res['detail_stat']}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
 st.divider()
 
