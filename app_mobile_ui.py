@@ -96,7 +96,6 @@ GAMES = {
 }
 
 class PhongThuyReferenceCore:
-    """Lõi tham chiếu phong thủy chuẩn xác tính toán Can Chi, Nạp Âm, Cung Mệnh và Cung Hoàng đạo."""
     @staticmethod
     def get_full_info(dob_str: str, gender: str = "Nam") -> Dict[str, Any]:
         try:
@@ -149,10 +148,6 @@ class PhongThuyReferenceCore:
 # 🌸 2B. LÕI CHUYÊN GIA HÀNH VI: MAI HOA DỊCH SỐ (STANDALONE ADVISORY)
 # =====================================================================
 class MaiHoaDichSoCore:
-    """
-    Hệ thống lập quẻ Mai Hoa Dịch Số theo thời gian động tâm (Chronos-based).
-    Đóng vai trò cố vấn kỷ luật hành vi và quản trị rủi ro tài chính cá nhân.
-    """
     BAT_QUAI = {
         1: {"name": "Càn", "nature": "Thiên", "element": "Kim", "bits": [1, 1, 1]},
         2: {"name": "Đoài", "nature": "Trạch", "element": "Kim", "bits": [1, 1, 0]},
@@ -183,11 +178,9 @@ class MaiHoaDichSoCore:
 
     @classmethod
     def cast_hexagram(cls, dt: datetime) -> Dict[str, Any]:
-        # Quy đổi giờ sang Địa Chi (1..12)
         hour_idx = ((dt.hour + 1) // 2) % 12
         chi_name, gio_num = cls.CHI_GIO[hour_idx]
 
-        # Công thức Mai Hoa Dịch Số theo thời gian động tâm
         nam_num = ((dt.year - 4) % 12) + 1
         thang_num = dt.month
         ngay_num = dt.day
@@ -203,19 +196,16 @@ class MaiHoaDichSoCore:
         hao_dong = tong_ha % 6
         hao_dong = 6 if hao_dong == 0 else hao_dong
 
-        # Dựng 6 hào từ dưới lên trên (hào 1..3 là Hạ quái, hào 4..6 là Thượng quái)
         ha_bits = cls.BAT_QUAI[ha_id]["bits"].copy()
         thuong_bits = cls.BAT_QUAI[thuong_id]["bits"].copy()
         full_bits = ha_bits + thuong_bits
 
-        # Biến hào động (0 <-> 1)
         bien_bits = full_bits.copy()
         bien_bits[hao_dong - 1] = 1 - bien_bits[hao_dong - 1]
 
         ha_bien_id = cls._bits_to_quai_id(bien_bits[:3])
         thuong_bien_id = cls._bits_to_quai_id(bien_bits[3:])
 
-        # Phân định Thể - Dụng (Hào động ở quái nào thì quái đó là Dụng, quái còn lại là Thể)
         if hao_dong <= 3:
             the_id, dung_id = thuong_id, ha_id
             the_pos = "Thượng Quái"
@@ -226,7 +216,6 @@ class MaiHoaDichSoCore:
         the_elem = cls.BAT_QUAI[the_id]["element"]
         dung_elem = cls.BAT_QUAI[dung_id]["element"]
 
-        # Luận giải Thể - Dụng thành 3 Vùng Quản Trị Rủi Ro (Cát / Bình / Bĩ)
         if the_elem == dung_elem or cls.NGU_HANH_SINH.get(dung_elem) == the_elem:
             zone = "CAT"
             zone_label = "🟢 VÙNG CÁT — Thời điểm thuận lợi & Tâm thế vững vàng"
@@ -350,54 +339,6 @@ st.divider()
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=False):
     st.caption("Kích hoạt âm thanh nền giúp giữ tâm thế tĩnh tại khi phân tích dữ liệu:")
     st.audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf756.mp3?filename=lofi-study-112191.mp3", format="audio/mp3")
-
-# =====================================================================
-# 🌸 6B. TRẠM MAI HOA DỊCH SỐ — CHUYÊN GIA TƯ VẤN HÀNH VI (ĐỘC LẬP)
-# =====================================================================
-with st.expander("🌸 Mai Hoa Dịch Số — Trạm Chiêm Nghiệm Thời Vận & Kỷ Luật (Độc lập)", expanded=True):
-    st.markdown(
-        "<div style='font-size: 13.5px; color: #C5CAE9; margin-bottom: 10px;'>"
-        "<b>📖 Vai trò & Học thuật:</b> Ứng dụng phương pháp lập quẻ <i>Mai Hoa Dịch Số</i> theo khoảnh khắc động tâm thực tế "
-        "để đánh giá nhịp sinh học tài chính và trạng thái tâm lý hiện tại. <b>Mô-đun này hoạt động độc lập hoàn toàn</b>, "
-        "không cộng trừ điểm vào bộ số thống kê mà đóng vai trò cố vấn quản trị rủi ro và kỷ luật vốn."
-        "</div>",
-        unsafe_allow_html=True
-    )
-
-    if "dong_tam_time" not in st.session_state:
-        st.session_state["dong_tam_time"] = datetime.now()
-
-    if st.button("🧭 Khởi Tạo Quẻ Thời Vận Hiện Tại (Lấy Thời Điểm Động Tâm)", key="btn_mai_hoa"):
-        st.session_state["dong_tam_time"] = datetime.now()
-
-    iching_res = MaiHoaDichSoCore.cast_hexagram(st.session_state["dong_tam_time"])
-
-    st.markdown(f"""
-    <div class="iching-card">
-        <div style="font-size: 13px; color: #D4AF37; font-weight: bold; margin-bottom: 6px;">
-            ⏳ Thời điểm động tâm: {iching_res['timestamp']} • Giờ {iching_res['chi_gio']}
-        </div>
-        <div style="font-size: 14px; color: #FAFAFA; line-height: 1.6;">
-            • <b>Quẻ Chủ:</b> {iching_res['que_chu']}<br>
-            • <b>Hào Động:</b> {iching_res['hao_dong']}<br>
-            • <b>Quẻ Biến:</b> {iching_res['que_bien']}
-        </div>
-        <hr style="border-color: #2E3446; margin: 10px 0;">
-        <div style="font-size: 15px; font-weight: bold; margin-bottom: 6px;">
-            {iching_res['zone_label']}
-        </div>
-        <div style="font-size: 13px; color: #B0BEC5; margin-bottom: 8px;">
-            <i>Luận giải Thể - Dụng:</i> {iching_res['summary']}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if iching_res["zone"] == "CAT":
-        st.success(f"💡 **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
-    elif iching_res["zone"] == "BINH":
-        st.warning(f"⚖️ **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
-    else:
-        st.error(f"🛡️ **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
 
 # =====================================================================
 # ⚙️ 7. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH & CHIẾN LƯỢC
@@ -537,7 +478,55 @@ for idx, res in enumerate(results, 1):
 st.divider()
 
 # =====================================================================
-# 🛡️ 9. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
+# 🌸 9B. TRẠM MAI HOA DỊCH SỐ — CHUYÊN GIA TƯ VẤN HÀNH VI (ĐẶT Ở PHÍA DƯỚI)
+# =====================================================================
+with st.expander("🌸 Mai Hoa Dịch Số — Trạm Chiêm Nghiệm Thời Vận & Kỷ Luật (Tư vấn Hành vi)", expanded=False):
+    st.markdown(
+        "<div style='font-size: 13.5px; color: #C5CAE9; margin-bottom: 10px;'>"
+        "<b>📖 Vai trò & Học thuật:</b> Sau khi xem xét các bộ số định lượng, mô-đun này cung cấp một góc nhìn tham vấn "
+        "về thời vận dựa trên phương pháp <i>Mai Hoa Dịch Số</i> theo thời điểm động tâm thực tế. "
+        "<b>Đứng độc lập hoàn toàn</b>, đây là lớp phanh an toàn giúp đánh giá nhịp sinh học tài chính và tâm lý kỷ luật của bạn."
+        "</div>",
+        unsafe_allow_html=True
+    )
+
+    if "dong_tam_time" not in st.session_state:
+        st.session_state["dong_tam_time"] = datetime.now()
+
+    if st.button("🧭 Khởi Tạo Quẻ Thời Vận Hiện Tại (Lấy Thời Điểm Động Tâm)", key="btn_mai_hoa_bottom"):
+        st.session_state["dong_tam_time"] = datetime.now()
+
+    iching_res = MaiHoaDichSoCore.cast_hexagram(st.session_state["dong_tam_time"])
+
+    st.markdown(f"""
+    <div class="iching-card">
+        <div style="font-size: 13px; color: #D4AF37; font-weight: bold; margin-bottom: 6px;">
+            ⏳ Thời điểm động tâm: {iching_res['timestamp']} • Giờ {iching_res['chi_gio']}
+        </div>
+        <div style="font-size: 14px; color: #FAFAFA; line-height: 1.6;">
+            • <b>Quẻ Chủ:</b> {iching_res['que_chu']}<br>
+            • <b>Hào Động:</b> {iching_res['hao_dong']}<br>
+            • <b>Quẻ Biến:</b> {iching_res['que_bien']}
+        </div>
+        <hr style="border-color: #2E3446; margin: 10px 0;">
+        <div style="font-size: 15px; font-weight: bold; margin-bottom: 6px;">
+            {iching_res['zone_label']}
+        </div>
+        <div style="font-size: 13px; color: #B0BEC5; margin-bottom: 8px;">
+            <i>Luận giải Thể - Dụng:</i> {iching_res['summary']}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if iching_res["zone"] == "CAT":
+        st.success(f"💡 **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
+    elif iching_res["zone"] == "BINH":
+        st.warning(f"⚖️ **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
+    else:
+        st.error(f"🛡️ **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
+
+# =====================================================================
+# 🛡️ 10. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
 # =====================================================================
 st.markdown("""
     <div class="watermark-box">
