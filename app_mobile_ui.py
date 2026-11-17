@@ -87,7 +87,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-# 📚 2. CƠ SỞ DỮ LIỆU & LÕI THAM CHIẾU PHONG THỦY (REFERENCE CORE)
+# 📚 2. CƠ SỞ DỮ LIỆU & LÕI THAM CHIẾU PHONG THỦY CHÍNH THỐNG (LẬP XUÂN & 60 HOA GIÁP)
 # =====================================================================
 GAMES = {
     "5x35": {"label": "Lotto 5/35", "max_main": 35, "pick": 5},
@@ -96,42 +96,119 @@ GAMES = {
 }
 
 class PhongThuyReferenceCore:
+    CAN = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"]
+    CHI = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"]
+
+    # Bảng tra cứu mốc Tiết Lập Xuân chuẩn thiên văn (Kinh độ mặt trời 315 độ)
     @staticmethod
-    def get_full_info(dob_str: str, gender: str = "Nam") -> Dict[str, Any]:
+    def get_solar_term_riping(year: int) -> datetime:
+        solar_terms = {
+            1974: datetime(1974, 2, 4, 12, 0),
+            1975: datetime(1975, 2, 4, 17, 52),
+            1976: datetime(1976, 2, 4, 23, 42),
+            1977: datetime(1977, 2, 5, 5, 31),
+            1978: datetime(1978, 2, 4, 11, 20),
+            1979: datetime(1979, 2, 4, 17, 5),
+            1980: datetime(1980, 2, 4, 22, 53),
+            1981: datetime(1981, 2, 4, 4, 45),
+            1982: datetime(1982, 2, 4, 10, 39),
+            1983: datetime(1983, 2, 4, 16, 22),
+            1984: datetime(1984, 2, 4, 22, 18),
+            1985: datetime(1985, 2, 5, 4, 14),
+            1986: datetime(1986, 2, 4, 10, 10),
+            1987: datetime(1987, 2, 4, 15, 58),
+            1988: datetime(1988, 2, 4, 21, 51),
+            1989: datetime(1989, 2, 4, 3, 47),
+            1990: datetime(1990, 2, 4, 9, 31),
+            1991: datetime(1991, 2, 4, 15, 17),
+            1992: datetime(1992, 2, 4, 21, 11),
+            1993: datetime(1993, 2, 4, 3, 3),
+            1994: datetime(1994, 2, 4, 8, 50),
+            1995: datetime(1995, 2, 4, 14, 41),
+            1996: datetime(1996, 2, 4, 20, 31),
+            1997: datetime(1997, 2, 4, 2, 25),
+            1998: datetime(1998, 2, 4, 8, 10),
+            1999: datetime(1999, 2, 4, 13, 58),
+            2000: datetime(2000, 2, 4, 19, 43),
+        }
+        return solar_terms.get(year, datetime(year, 2, 4, 12, 0))
+
+    @classmethod
+    def get_lunar_year_precise(cls, y: int, m: int, d: int) -> int:
+        user_dt = datetime(y, m, d, 12, 0)
+        lap_xuan = cls.get_solar_term_riping(y)
+        if user_dt < lap_xuan:
+            return y - 1  # Vẫn thuộc năm Âm lịch trước theo Lập Xuân
+        return y
+
+    # Bảng 60 Hoa Giáp → Nạp Âm đầy đủ nguyên bản
+    NAP_AM_60 = [
+        "Hải Trung Kim", "Hải Trung Kim", "Lư Trung Hỏa", "Lư Trung Hỏa", "Đại Lâm Mộc", "Đại Lâm Mộc",
+        "Lộ Bàng Thổ", "Lộ Bàng Thổ", "Kiếm锋金", "Kiếm Phong Kim", "Sơn Đầu Hỏa", "Sơn Đầu Hỏa",
+        "Giản Hạ Thuỷ", "Giản Hạ Thủy", "Thành Thượng Thổ", "Thành Thượng Thổ", "Bạch Lạp Kim", "Bạch Lạp Kim",
+        "Dương Liễu Mộc", "Dương Liễu Mộc", "Tuyền Trung Thuỷ", "Tuyền Trung Thủy", "Ốc Thượng Thổ", "Ốc Thượng Thổ",
+        "Tích Lịch Hỏa", "Tích Lịch Hỏa", "Tùng Bách Mộc", "Tùng Bách Mộc", "Trường Lưu Thuỷ", "Trường Lưu Thủy",
+        "Sa Trung Kim", "Sa Trung Kim", "Sơn Hạ Hỏa", "Sơn Hạ Hỏa", "Bình Địa Mộc", "Bình Địa Mộc",
+        "Bích Thượng Thổ", "Bích Thượng Thổ", "Kim Bạch Kim", "Kim Bạch Kim", "Phúc Đăng Hỏa", "Phúc Đăng Hỏa",
+        "Thiên Hà Thuỷ", "Thiên Hà Thủy", "Đại Trạch Thổ", "Đại Trạch Thổ", "Thoa Xuyến Kim", "Thoa Xuyến Kim",
+        "Tang Đố Mộc", "Tang Đố Mộc", "Đại Khê Thuỷ", "Đại Khê Thủy", "Sa Trung Thổ", "Sa Trung Thổ",
+        "Thiên Thượng Hỏa", "Thiên Thượng Hỏa", "Thạch Lựu Mộc", "Thạch Lựu Mộc", "Đại Hải Thuỷ", "Đại Hải Thủy"
+    ]
+
+    @classmethod
+    def get_full_info(cls, dob_str: str, gender: str = "Nam") -> Dict[str, Any]:
         try:
             dt = datetime.strptime(dob_str, "%d/%m/%Y")
             day, month, year = dt.day, dt.month, dt.year
         except:
-            year, month, day = 1990, 1, 1
+            day, month, year = 2, 2, 1974
 
-        can_list = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"]
-        chi_list = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"]
-        
-        can = can_list[(year - 4) % 10]
-        chi = chi_list[(year - 4) % 12]
+        # Xác định năm Âm lịch chuẩn xác theo Tiết Lập Xuân
+        l_year = cls.get_lunar_year_precise(year, month, day)
 
-        elements = ["Kim", "Thủy", "Hỏa", "Thổ", "Mộc"]
-        menh_elem = elements[(year % 5)]
-        menh_names = {
-            "Kim": "Hải Trung Kim (Vàng trong biển)",
-            "Thủy": "Đại Khê Thủy (Nước suối lớn)",
-            "Hỏa": "Lư Trung Hỏa (Lửa trong lò)",
-            "Thổ": "Bích Thượng Thổ (Đất trên tường)",
-            "Mộc": "Tùng Bách Mộc (Gỗ tùng bách)"
+        can = cls.CAN[(l_year - 4) % 10]
+        chi = cls.CHI[(l_year - 4) % 12]
+
+        # Tra cứu Nạp Âm chính xác từ chu kỳ 60 Hoa Giáp
+        idx_60 = (l_year - 4) % 60
+        menh_full = cls.NAP_AM_60[idx_60] if 0 <= idx_60 < len(cls.NAP_AM_60) else "Bình Địa Mộc"
+
+        # Lấy hành ngũ hành đại diện từ tên Nạp Âm
+        if "Kim" in menh_full: menh_elem = "Kim"
+        elif "Thủy" in menh_full or "Thuỷ" in menh_full: menh_elem = "Thủy"
+        elif "Hỏa" in menh_full: menh_elem = "Hỏa"
+        elif "Thổ" in menh_full: menh_elem = "Thổ"
+        else: menh_elem = "Mộc"
+
+        # Bát Trạch Cung Phi chính thống theo công thức 10-N (Nam) và 5+N (Nữ)
+        year_str = str(l_year)
+        sum_digits = int(year_str[-2]) + int(year_str[-1])
+        while sum_digits > 9:
+            sum_digits = sum_digits // 10 + sum_digits % 10
+
+        cung_map = {
+            1: "Khảm (Thủy)", 2: "Khôn (Thổ)", 3: "Chấn (Mộc)", 
+            4: "Tốn (Mộc)", 6: "Càn (Kim)", 7: "Đoài (Kim)", 
+            8: "Cấn (Thổ)", 9: "Ly (Hỏa)"
         }
-        menh_full = menh_names.get(menh_elem, "Bình Địa Mộc")
 
-        # Tính toán cung mệnh Bát Trạch cơ bản theo giới tính
-        sum_digit = sum([int(digit) for digit in str(year)])
-        while sum_digit > 9:
-            sum_digit = sum([int(digit) for digit in str(sum_digit)])
-        
-        if year < 2000:
-            menh_cung = (11 - sum_digit) if gender == "Nam" else (4 + sum_digit)
-        else:
-            menh_cung = (9 - sum_digit) if gender == "Nam" else (6 + sum_digit)
-        menh_cung = menh_cung % 9 if menh_cung % 9 != 0 else 9
+        g_lower = gender.lower()
+        if "nam" in g_lower:
+            remainder = 10 - sum_digits
+            if remainder == 5: remainder = 2
+            cung_menh = cung_map.get(remainder, "Cấn (Thổ)")
+        elif "nữ" in g_lower or "nu" in g_lower:
+            remainder = 5 + sum_digits
+            while remainder > 9:
+                remainder = remainder // 10 + remainder % 10
+            if remainder == 5: remainder = 8
+            cung_menh = cung_map.get(remainder, "Đoài (Kim)")
+        else: # Không xác định / Khác (Lấy trung tính theo Nam)
+            remainder = 10 - sum_digits
+            if remainder == 5: remainder = 2
+            cung_menh = cung_map.get(remainder, "Cấn (Thổ)")
 
+        # Cung Hoàng đạo Phương Tây (tính theo Dương lịch)
         western_sign = "Bảo Bình"
         if (month == 3 and day >= 21) or (month == 4 and day <= 19): western_sign = "Bạch Dương"
         elif (month == 4 and day >= 20) or (month == 5 and day <= 20): western_sign = "Kim Ngưu"
@@ -147,12 +224,13 @@ class PhongThuyReferenceCore:
         else: western_sign = "Song Ngư"
 
         return {
-            "lunar_year": year,
+            "lunar_year": l_year,
             "gender": gender,
             "can": can,
             "chi": chi,
             "menh": menh_full,
             "menh_elem": menh_elem,
+            "cung_menh": cung_menh,
             "western_sign": western_sign
         }
 
@@ -346,10 +424,10 @@ st.caption("🔒 **CACHED REAL CORE ENGINE** | Phân tích Định lượng Họ
 st.divider()
 
 # =====================================================================
-# 🎵 6. TRÌNH PHÁT NHẠC NỀN
+# 🎵 6. TRÌNH PHÁT NHẠC NỀN (AMBIENT AUDIO)
 # =====================================================================
 with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambient Audio)", expanded=False):
-    st.caption("Kích hoạt âm thanh nền giúp giữ tâm thế tĩnh tại khi phân tích dữ liệu:")
+    st.caption("Kích hoạt âm thanh nền tần số Alpha giúp giữ tâm thế tĩnh tại:")
     st.audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf756.mp3?filename=lofi-study-112191.mp3", format="audio/mp3")
 
 # =====================================================================
@@ -369,7 +447,7 @@ with col2:
         game_label = st.selectbox("🎯 Trò chơi", ["China Super Lotto"])
         game_key = "6x45"
 
-with st.expander("👤 Thiết lập Bản mệnh, Giới tính & Tầm nhìn Chiến lược", expanded=True):
+with st.expander("👤 Thiết lập Bản mệnh (Tiết Lập Xuân), Giới tính & Tầm nhìn", expanded=True):
     col_d, col_m, col_y = st.columns(3)
     with col_d:
         day = st.selectbox("Ngày", list(range(1, 32)), index=1)
@@ -378,12 +456,20 @@ with st.expander("👤 Thiết lập Bản mệnh, Giới tính & Tầm nhìn Ch
     with col_y:
         year = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36)
     
-    # Trường chọn Giới tính phục vụ tính toán Bát Trạch
-    gender = st.radio("⚧ Giới tính (Phục vụ định lượng Cung Mệnh)", options=["Nam", "Nữ"], horizontal=True)
+    # Bổ sung đầy đủ 3 lựa chọn giới tính chính thống
+    gender = st.radio(
+        "⚧ Giới tính (Phục vụ định lượng Cung Mệnh Bát Trạch chuẩn thư tịch)", 
+        options=["Nam", "Nữ", "Không xác định / Khác"], 
+        horizontal=True
+    )
 
     dob_str = f"{day:02d}/{month:02d}/{year}"
     profile = PhongThuyReferenceCore.get_full_info(dob_str, gender)
-    st.info(f"📅 Bản mệnh ({profile['gender']}): **{profile['can']} {profile['chi']}** — **{profile['menh']}** | 🌟 Cung: **{profile['western_sign']}**")
+    st.info(
+        f"📅 Bản mệnh (Tiết Lập Xuân - Năm Âm {profile['lunar_year']}): "
+        f"**{profile['can']} {profile['chi']}** — **{profile['menh']}** | "
+        f"🏛️ Cung Mệnh: **{profile['cung_menh']}** | 🌟 Cung Hoàng đạo: **{profile['western_sign']}**"
+    )
 
     st.markdown("---")
     st.markdown("📊 **Cấu hình Tầm nhìn & Khẩu vị Thống kê:**")
@@ -401,7 +487,7 @@ with st.expander("👤 Thiết lập Bản mệnh, Giới tính & Tầm nhìn Ch
 
     st.markdown("---")
     st.markdown("**🎛️ Bật/Tắt Hội đồng Định lượng (Chấm điểm bộ số):**")
-    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm)", value=True)
+    use_east = st.checkbox("🏛️ Hội đồng Phương Đông (Can Chi / Nạp Âm / Bát Trạch Lập Xuân)", value=True)
     use_west = st.checkbox("🌟 Hội đồng Phương Tây (Cung Hoàng đạo)", value=True)
     use_stat = st.checkbox("📊 Hội đồng Thống kê Ma trận (Tần suất Hot/Cold)", value=True)
 
@@ -419,7 +505,7 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
     time.sleep(0.3)
 
     if use_east:
-        status_text.text(f"🏛️ Hội đồng Phương Đông: Đang phân rã Can Chi, Nạp Âm cho bản mệnh {profile['can']} {profile['chi']} ({gender})...")
+        status_text.text(f"🏛️ Hội đồng Phương Đông: Đang chiếu xạ Tiết Lập Xuân, Can Chi và Bát Trạch cho mệnh {profile['can']} {profile['chi']}...")
         progress_bar.progress(40)
         time.sleep(0.4)
 
@@ -497,7 +583,7 @@ if st.button("🔥 KÍCH HOẠT HỘI ĐỒNG PHÂN TÍCH"):
             "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
             "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
             "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
-            "detail_east": f"Năng lượng Can Chi {profile['can']} {profile['chi']} ({profile['gender']}) tương thích hành {profile['menh_elem']}.",
+            "detail_east": f"Năng lượng Can Chi Lập Xuân {profile['can']} {profile['chi']} ({profile['gender']}) - Cung {profile['cung_menh']}.",
             "detail_west": f"Cộng hưởng sóng nguyên tố cung hoàng đạo {profile['western_sign']}.",
             "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
         })
@@ -578,6 +664,6 @@ st.markdown("""
     <div class="watermark-box">
         <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ HARMONY COUNCIL PRO v2.6 — MOBILE EDITION</p>
         <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV-D11</b></p>
-        <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều & Kỷ luật hành vi • Cached Memory Active</p>
+        <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng thiên văn Lập Xuân & Kỷ luật hành vi • Cached Memory Active</p>
     </div>
 """, unsafe_allow_html=True)
