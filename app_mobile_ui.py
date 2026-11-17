@@ -121,6 +121,17 @@ class PhongThuyReferenceCore:
         }
         menh_full = menh_names.get(menh_elem, "Bình Địa Mộc")
 
+        # Tính Cung Mệnh Bát Trạch sơ bộ theo giới tính
+        sum_digit = sum([int(digit) for digit in str(year)])
+        while sum_digit > 9:
+            sum_digit = sum([int(digit) for digit in str(sum_digit)])
+        
+        if year < 2000:
+            menh_cung = (11 - sum_digit) if gender == "Nam" else (4 + sum_digit)
+        else:
+            menh_cung = (9 - sum_digit) if gender == "Nam" else (6 + sum_digit)
+        menh_cung = menh_cung % 9 if menh_cung % 9 != 0 else 9
+
         western_sign = "Bảo Bình"
         if (month == 3 and day >= 21) or (month == 4 and day <= 19): western_sign = "Bạch Dương"
         elif (month == 4 and day >= 20) or (month == 5 and day <= 20): western_sign = "Kim Ngưu"
@@ -137,6 +148,7 @@ class PhongThuyReferenceCore:
 
         return {
             "lunar_year": year,
+            "gender": gender,
             "can": can,
             "chi": chi,
             "menh": menh_full,
@@ -341,7 +353,7 @@ with st.expander("🎵 Trình phát Nhạc nền & Tần số Thư giãn (Ambien
     st.audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf756.mp3?filename=lofi-study-112191.mp3", format="audio/mp3")
 
 # =====================================================================
-# ⚙️ 7. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH & CHIẾN LƯỢC
+# ⚙️ 7. INPUTS & CẤU HÌNH THỊ TRƯỜNG, NĂM SINH, GIỚI TÍNH & CHIẾN LƯỢC
 # =====================================================================
 col1, col2 = st.columns(2)
 with col1:
@@ -357,7 +369,7 @@ with col2:
         game_label = st.selectbox("🎯 Trò chơi", ["China Super Lotto"])
         game_key = "6x45"
 
-with st.expander("👤 Thiết lập Bản mệnh & Tầm nhìn Chiến lược", expanded=True):
+with st.expander("👤 Thiết lập Bản mệnh, Giới tính & Tầm nhìn Chiến lược", expanded=True):
     col_d, col_m, col_y = st.columns(3)
     with col_d:
         day = st.selectbox("Ngày", list(range(1, 32)), index=1)
@@ -366,9 +378,12 @@ with st.expander("👤 Thiết lập Bản mệnh & Tầm nhìn Chiến lược"
     with col_y:
         year = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36)
     
+    # Bổ sung trường chọn Giới tính vô cùng quan trọng cho Bát Trạch
+    gender = st.radio("⚧ Giới tính (Phục vụ định lượng Cung Mệnh)", options=["Nam", "Nữ"], horizontal=True)
+
     dob_str = f"{day:02d}/{month:02d}/{year}"
-    profile = PhongThuyReferenceCore.get_full_info(dob_str, "Nam")
-    st.info(f"📅 Bản mệnh: **{profile['can']} {profile['chi']}** — **{profile['menh']}** | 🌟 Cung: **{profile['western_sign']}**")
+    profile = PhongThuyReferenceCore.get_full_info(dob_str, gender)
+    st.info(f"📅 Bản mệnh ({profile['gender']}): **{profile['can']} {profile['chi']}** — **{profile['menh']}** | 🌟 Cung: **{profile['western_sign']}**")
 
     st.markdown("---")
     st.markdown("📊 **Cấu hình Tầm nhìn & Khẩu vị Thống kê:**")
@@ -451,7 +466,7 @@ for i in range(1, num_rows + 1):
         "east_score": round(base_score - rnd.uniform(0.2, 1.2), 1),
         "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
         "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
-        "detail_east": f"Năng lượng Can Chi {profile['can']} {profile['chi']} tương thích hành {profile['menh_elem']}.",
+        "detail_east": f"Năng lượng Can Chi {profile['can']} {profile['chi']} ({profile['gender']}) tương thích hành {profile['menh_elem']}.",
         "detail_west": f"Cộng hưởng sóng nguyên tố cung hoàng đạo {profile['western_sign']}.",
         "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
     })
