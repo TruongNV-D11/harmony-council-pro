@@ -792,6 +792,348 @@ class MaiHoaDichSoCore:
         }
 
 
+
+# =====================================================================
+# 🌌 3C. LÕI CHIÊM TINH THIÊN VĂN (TRANSIT / EVENT CHART & TỌA ĐỘ TOÀN CẦU)
+# =====================================================================
+VIETNAM_PROVINCES_34: Dict[str, Tuple[float, float]] = {
+    "TP. Hồ Chí Minh": (10.8231, 106.6297),
+    "TP. Hà Nội": (21.0285, 105.8542),
+    "TP. Hải Phòng": (20.8449, 106.6881),
+    "Cao Bằng": (22.6663, 106.2522),
+    "Điện Biên": (21.3860, 103.0230),
+    "Lai Châu": (22.3964, 103.4703),
+    "Lạng Sơn": (21.8537, 106.7615),
+    "Sơn La": (21.3256, 103.9188),
+    "Quảng Ninh": (20.9517, 107.0448),
+    "Tuyên Quang": (21.8233, 105.2142),
+    "Lào Cai": (22.4809, 103.9755),
+    "Thái Nguyên": (21.5942, 105.8482),
+    "Phú Thọ": (21.3227, 105.4020),
+    "Bắc Ninh": (21.1861, 106.0763),
+    "Hưng Yên": (20.6464, 106.0511),
+    "Ninh Bình": (20.2506, 105.9745),
+    "Thanh Hóa": (19.8067, 105.7852),
+    "Nghệ An": (18.6796, 105.6813),
+    "Hà Tĩnh": (18.3559, 105.8877),
+    "Quảng Trị": (16.7403, 107.1855),
+    "TP. Huế": (16.4637, 107.5909),
+    "TP. Đà Nẵng": (16.0544, 108.2022),
+    "Quảng Ngãi": (15.1214, 108.8044),
+    "Gia Lai": (13.9833, 108.0000),
+    "Đắk Lắk": (12.6667, 108.0500),
+    "Khánh Hòa": (12.2388, 109.1967),
+    "Lâm Đồng": (11.9404, 108.4583),
+    "Đồng Nai": (10.9574, 114.0000) if False else (10.9574, 106.8426),
+    "Tây Ninh": (11.3100, 106.0989),
+    "Đồng Tháp": (10.4938, 105.6882),
+    "An Giang": (10.3816, 105.4356),
+    "Vĩnh Long": (10.2537, 105.9722),
+    "TP. Cần Thơ": (10.0452, 105.7469),
+    "Cà Mau": (9.1769, 105.1500),
+}
+
+def parse_pasted_coordinates(
+    raw_text: str,
+    fallback_lat: float,
+    fallback_lon: float
+) -> Tuple[float, float, bool, str]:
+    """
+    Trích (lat, lon) từ chuỗi dán từ Zalo/Google Maps hoặc tọa độ toàn cầu.
+    Hỗ trợ cặp số phân tách dấu phẩy/khoảng trắng hoặc link có @lat,lon / q=lat,lon.
+    """
+    if not raw_text or not raw_text.strip():
+        return fallback_lat, fallback_lon, False, "Khu vực đã chọn"
+
+    txt = raw_text.strip()
+    # Ưu tiên mẫu @lat,lon hoặc q=lat,lon nếu có
+    url_match = re.search(r"(?:@|q=|ll=|center=)([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)", txt)
+    if url_match:
+        lat_val, lon_val = float(url_match.group(1)), float(url_match.group(2))
+    else:
+        nums = re.findall(r"[-+]?\d+(?:\.\d+)?", txt)
+        if len(nums) < 2:
+            return fallback_lat, fallback_lon, False, "Không đủ 2 tọa độ — dùng khu vực mặc định"
+        lat_val, lon_val = float(nums[0]), float(nums[1])
+
+    # Xử lý ký hiệu Nam/Tây nếu người dùng có dán S/W
+    upper_txt = txt.upper()
+    if "S" in upper_txt and "N" not in upper_txt and lat_val > 0:
+        lat_val = -abs(lat_val)
+    if "W" in upper_txt and "E" not in upper_txt and lon_val > 0:
+        lon_val = -abs(lon_val)
+
+    if -90.0 <= lat_val <= 90.0 and -180.0 <= lon_val <= 180.0:
+        return round(lat_val, 6), round(lon_val, 6), True, "Tọa độ dán (Toàn cầu / Zalo)"
+
+    return fallback_lat, fallback_lon, False, "Tọa độ ngoài phạm vi hợp lệ — dùng khu vực mặc định"
+
+
+class TransitAstrologyCore:
+    """
+    Tính toán thiên văn vị trí thiên thể (Ecliptic Longitude) theo thời điểm quay (draw_dt)
+    và tọa độ địa lý (lat, lon) dựa trên thuật toán thiên văn kinh điển (Julian Day & quỹ đạo Kepler).
+    """
+
+    ZODIAC_SIGNS = [
+        ("Bạch Dương", "Hỏa", "Tiên phong", "Hỏa (Mars)", 1),
+        ("Kim Ngưu", "Thổ", "Kiên định", "Kim (Venus)", 2),
+        ("Song Tử", "Khí", "Biến đổi", "Thủy (Mercury)", 3),
+        ("Cự Giải", "Thủy", "Tiên phong", "Mặt Trăng (Moon)", 4),
+        ("Sư Tử", "Hỏa", "Kiên định", "Mặt Trời (Sun)", 5),
+        ("Xử Nữ", "Thổ", "Biến đổi", "Thủy (Mercury)", 6),
+        ("Thiên Bình", "Khí", "Tiên phong", "Kim (Venus)", 7),
+        ("Bọ Cạp", "Thủy", "Kiên định", "Diêm Vương (Pluto)", 8),
+        ("Nhân Mã", "Hỏa", "Biến đổi", "Mộc (Jupiter)", 9),
+        ("Ma Kết", "Thổ", "Tiên phong", "Thổ (Saturn)", 10),
+        ("Bảo Bình", "Khí", "Kiên định", "Thiên Vương (Uranus)", 11),
+        ("Song Ngư", "Thủy", "Biến đổi", "Hải Vương (Neptune)", 12),
+    ]
+
+    PLANET_SYMBOLS = {
+        "Sun": ("☉", "Mặt Trời", "#FFD54F"),
+        "Moon": ("☽", "Mặt Trăng", "#E0F7FA"),
+        "Mercury": ("☿", "Thủy Tinh", "#80CBC4"),
+        "Venus": ("♀", "Kim Tinh", "#F48FB1"),
+        "Mars": ("♂", "Hỏa Tinh", "#FF7043"),
+        "Jupiter": ("♃", "Mộc Tinh", "#CE93D8"),
+        "Saturn": ("♄", "Thổ Tinh", "#90CAF9"),
+    }
+
+    @staticmethod
+    def _norm_deg(deg: float) -> float:
+        return deg % 360.0
+
+    @staticmethod
+    def to_julian_day(dt_local: datetime) -> float:
+        if dt_local.tzinfo is None:
+            dt_utc = dt_local.replace(tzinfo=VN_TZ).astimezone(timezone.utc)
+        else:
+            dt_utc = dt_local.astimezone(timezone.utc)
+        y = dt_utc.year
+        m = dt_utc.month
+        d = dt_utc.day + (
+            dt_utc.hour + dt_utc.minute / 60.0 + dt_utc.second / 3600.0
+        ) / 24.0
+        if m <= 2:
+            y -= 1
+            m += 12
+        a = y // 100
+        b = 2 - a + (a // 4)
+        return math.floor(365.25 * (y + 4716)) + math.floor(30.6001 * (m + 1)) + d + b - 1524.5
+
+    @classmethod
+    def lon_to_sign_info(cls, lon_deg: float) -> Dict[str, Any]:
+        lon_norm = cls._norm_deg(lon_deg)
+        idx = int(lon_norm // 30.0) % 12
+        deg_in_sign = lon_norm % 30.0
+        sign_name, elem, mod, ruler, sign_num = cls.ZODIAC_SIGNS[idx]
+        return {
+            "lon": round(lon_norm, 2),
+            "sign_idx": idx,
+            "sign_num": sign_num,
+            "sign": sign_name,
+            "element": elem,
+            "modality": mod,
+            "ruler": ruler,
+            "deg_in_sign": round(deg_in_sign, 2),
+        }
+
+    @classmethod
+    def compute_natal_chart(
+        cls,
+        bday: int,
+        bmonth: int,
+        byear: int,
+        bhour: int,
+        bminute: int,
+        lat: float,
+        lon: float
+    ) -> Dict[str, Any]:
+        """
+        Tính lá số sinh cá nhân (Natal Chart) khi người dùng cung cấp đầy đủ giờ/phút sinh:
+        tính kinh độ Mặt Trời, Mặt Trăng, các hành tinh lúc sinh và Cung Mọc cá nhân (Natal AC).
+        """
+        dt_birth = datetime(int(byear), int(bmonth), int(bday), int(bhour), int(bminute), 0, tzinfo=VN_TZ)
+        chart = cls.compute_transit_chart(dt_birth, lat, lon)
+        chart["birth_datetime"] = dt_birth.strftime("%d/%m/%Y %H:%M")
+        chart["has_exact_time"] = True
+        return chart
+
+    @classmethod
+    def compute_transit_chart(cls, dt_local: datetime, lat: float, lon: float) -> Dict[str, Any]:
+        """
+        Tính kinh độ hoàng đạo các thiên thể tại thời điểm quay (dt_local),
+        điểm Cung Mọc (Ascendant) theo (lat, lon) và các góc chiếu chính.
+        """
+        jd = cls.to_julian_day(dt_local)
+        t_cent = (jd - 2451545.0) / 36525.0  # Julian centuries since J2000.0
+        d_days = jd - 2451545.0
+
+        # 1. Mặt Trời (Sun)
+        m_sun = cls._norm_deg(357.52911 + 35999.05029 * t_cent - 0.0001537 * (t_cent ** 2))
+        l0_sun = cls._norm_deg(280.46646 + 36000.76983 * t_cent + 0.0003032 * (t_cent ** 2))
+        m_sun_rad = math.radians(m_sun)
+        eq_center_sun = (
+            (1.914602 - 0.004817 * t_cent - 0.000014 * (t_cent ** 2)) * math.sin(m_sun_rad)
+            + (0.019993 - 0.000101 * t_cent) * math.sin(2 * m_sun_rad)
+            + 0.000289 * math.sin(3 * m_sun_rad)
+        )
+        sun_lon = cls._norm_deg(l0_sun + eq_center_sun)
+
+        # 2. Mặt Trăng (Moon)
+        lp_moon = cls._norm_deg(218.3164477 + 481267.88123421 * t_cent)
+        mp_moon = cls._norm_deg(134.9633964 + 477198.8675055 * t_cent)
+        d_elong = cls._norm_deg(297.8501921 + 445267.1114034 * t_cent)
+        f_arg = cls._norm_deg(93.2720950 + 483202.0175233 * t_cent)
+        moon_lon = cls._norm_deg(
+            lp_moon
+            + 6.288774 * math.sin(math.radians(mp_moon))
+            + 1.274027 * math.sin(math.radians(2 * d_elong - mp_moon))
+            + 0.658314 * math.sin(math.radians(2 * d_elong))
+            + 0.213618 * math.sin(math.radians(2 * mp_moon))
+            - 0.185116 * math.sin(math.radians(m_sun))
+            - 0.114332 * math.sin(math.radians(2 * f_arg))
+        )
+
+        # 3. Các hành tinh quỹ đạo trung bình + phương trình tâm sai bậc 1
+        planet_elements = {
+            "Mercury": (252.2509 + 149472.6741 * t_cent, 174.7948 + 149472.5150 * t_cent, 23.44),
+            "Venus": (181.9798 + 58517.8157 * t_cent, 50.4161 + 58517.8039 * t_cent, 0.78),
+            "Mars": (355.4330 + 19140.2993 * t_cent, 19.3730 + 19139.8585 * t_cent, 10.69),
+            "Jupiter": (34.3515 + 3034.9057 * t_cent, 20.0202 + 3034.6862 * t_cent, 5.55),
+            "Saturn": (50.0774 + 1222.1138 * t_cent, 317.0207 + 1221.5515 * t_cent, 6.35),
+        }
+
+        bodies: Dict[str, Dict[str, Any]] = {
+            "Sun": cls.lon_to_sign_info(sun_lon),
+            "Moon": cls.lon_to_sign_info(moon_lon),
+        }
+
+        for p_name, (l_mean, m_anom, eq_amp) in planet_elements.items():
+            m_rad = math.radians(cls._norm_deg(m_anom))
+            p_lon = cls._norm_deg(l_mean + eq_amp * math.sin(m_rad))
+            bodies[p_name] = cls.lon_to_sign_info(p_lon)
+
+        # 4. Cung Mọc (Ascendant) ước lượng theo Local Sidereal Time & vĩ độ lat
+        gmst = cls._norm_deg(280.46061837 + 360.98564736629 * d_days)
+        lst_rad = math.radians(cls._norm_deg(gmst + lon))
+        eps_rad = math.radians(23.43929 - 0.0130042 * t_cent)
+        lat_rad = math.radians(max(-66.0, min(66.0, lat)))
+
+        y_asc = -math.cos(lst_rad)
+        x_asc = math.sin(lst_rad) * math.cos(eps_rad) + math.tan(lat_rad) * math.sin(eps_rad)
+        asc_lon = cls._norm_deg(math.degrees(math.atan2(y_asc, x_asc)))
+        asc_info = cls.lon_to_sign_info(asc_lon)
+
+        # 5. Góc chiếu (Aspects) chính giữa các thiên thể
+        aspect_defs = [
+            (0.0, "Trùng tụ (Conjunction)", 7.0),
+            (60.0, "Lục hợp (Sextile)", 5.0),
+            (90.0, "Vuông góc (Square)", 6.0),
+            (120.0, "Tam hợp (Trine)", 7.0),
+            (180.0, "Đối đỉnh (Opposition)", 7.0),
+        ]
+        body_keys = list(bodies.keys())
+        aspects: List[Dict[str, Any]] = []
+        for i in range(len(body_keys)):
+            for j in range(i + 1, len(body_keys)):
+                k1, k2 = body_keys[i], body_keys[j]
+                diff = abs(bodies[k1]["lon"] - bodies[k2]["lon"])
+                ang = min(diff, 360.0 - diff)
+                for target_ang, asp_label, orb in aspect_defs:
+                    delta = abs(ang - target_ang)
+                    if delta <= orb:
+                        aspects.append({
+                            "p1": cls.PLANET_SYMBOLS[k1][1],
+                            "p2": cls.PLANET_SYMBOLS[k2][1],
+                            "aspect": asp_label,
+                            "orb": round(delta, 1),
+                        })
+                        break
+
+        return {
+            "jd": round(jd, 4),
+            "lat": lat,
+            "lon": lon,
+            "ascendant": asc_info,
+            "bodies": bodies,
+            "aspects": aspects[:6],
+        }
+
+    @classmethod
+    def render_chart_figure(cls, transit_data: Dict[str, Any], user_sign: str = ""):
+        """Vẽ Bản đồ sao Hoàng đạo (Transit Chart) 360° bằng matplotlib."""
+        import matplotlib.pyplot as plt
+        from matplotlib.patches import Wedge, Circle
+
+        fig, ax = plt.subplots(figsize=(6.2, 6.2), dpi=130)
+        fig.patch.set_facecolor("#0E1117")
+        ax.set_facecolor("#0E1117")
+        ax.set_xlim(-1.35, 1.35)
+        ax.set_ylim(-1.35, 1.35)
+        ax.set_aspect("equal")
+        ax.axis("off")
+
+        elem_colors = {
+            "Hỏa": "#3B1818",
+            "Thổ": "#2A2416",
+            "Khí": "#162636",
+            "Thủy": "#142B29",
+        }
+        sign_short = [
+            "Bạch Dương", "Kim Ngưu", "Song Tử", "Cự Giải",
+            "Sư Tử", "Xử Nữ", "Thiên Bình", "Bọ Cạp",
+            "Nhân Mã", "Ma Kết", "Bảo Bình", "Song Ngư"
+        ]
+
+        # Vẽ 12 cung Hoàng đạo (mỗi cung 30°, bắt đầu từ 0° Bạch Dương ở góc phải/trên tùy quy ước)
+        for idx in range(12):
+            start_deg = idx * 30.0
+            end_deg = (idx + 1) * 30.0
+            _, elem, _, _, _ = cls.ZODIAC_SIGNS[idx]
+            face_col = elem_colors.get(elem, "#1A1C23")
+            edge_col = "#FFD700" if sign_short[idx] == user_sign else "#3A3F52"
+            lw = 2.0 if sign_short[idx] == user_sign else 0.9
+
+            wedge = Wedge((0, 0), 1.05, start_deg, end_deg, width=0.22, facecolor=face_col, edgecolor=edge_col, linewidth=lw)
+            ax.add_patch(wedge)
+
+            mid_rad = math.radians(start_deg + 15.0)
+            tx = 0.94 * math.cos(mid_rad)
+            ty = 0.94 * math.sin(mid_rad)
+            label_txt = sign_short[idx][:6] + ("★" if sign_short[idx] == user_sign else "")
+            ax.text(tx, ty, label_txt, color="#E5E7EB", fontsize=7.5, ha="center", va="center", fontweight="bold")
+
+        ax.add_patch(Circle((0, 0), 0.83, facecolor="#12151E", edgecolor="#2E3446", linewidth=1.0))
+        ax.add_patch(Circle((0, 0), 0.50, facecolor="#0E1117", edgecolor="#1D976C", linewidth=1.0, linestyle="--"))
+
+        # Đánh dấu Ascendant (AC)
+        asc_lon = transit_data["ascendant"]["lon"]
+        asc_rad = math.radians(asc_lon)
+        ax.plot([0, 1.05 * math.cos(asc_rad)], [0, 1.05 * math.sin(asc_rad)], color="#00E676", linestyle=":", linewidth=1.2)
+        ax.text(1.16 * math.cos(asc_rad), 1.16 * math.sin(asc_rad), "AC", color="#00E676", fontsize=8.5, ha="center", va="center", fontweight="bold")
+
+        # Đặt các thiên thể lên vòng tròn (phân tầng bán kính nhẹ để tránh đè chữ)
+        radii_cycle = [0.68, 0.58, 0.74]
+        for idx, (b_key, b_info) in enumerate(transit_data["bodies"].items()):
+            sym, vi_name, col = cls.PLANET_SYMBOLS[b_key]
+            ang_rad = math.radians(b_info["lon"])
+            r = radii_cycle[idx % len(radii_cycle)]
+            px = r * math.cos(ang_rad)
+            py = r * math.sin(ang_rad)
+
+            ax.scatter([px], [py], color=col, s=55, zorder=5, edgecolors="#000000", linewidth=0.6)
+            lx = (r + 0.08) * math.cos(ang_rad)
+            ly = (r + 0.08) * math.sin(ang_rad)
+            ax.text(lx, ly, f"{sym} {b_info['deg_in_sign']:.0f}°", color=col, fontsize=7.8, ha="center", va="center", fontweight="bold", zorder=6)
+
+        ax.text(0, 0.05, "TRANSIT CHART", color="#FFD700", fontsize=9, ha="center", va="center", fontweight="bold")
+        ax.text(0, -0.07, f"{transit_data['lat']:.2f}, {transit_data['lon']:.2f}", color="#9CA3AF", fontsize=7.5, ha="center", va="center")
+        plt.tight_layout(pad=0.2)
+        return fig
+
+
 class FlexibleCouncilEvaluator:
     @staticmethod
     def judge_eastern(num: int, menh_elem: str) -> float:
@@ -806,7 +1148,16 @@ class FlexibleCouncilEvaluator:
         return 1.0 if num in favorable else 0.4
 
     @staticmethod
-    def judge_western_deep(num: int, max_main: int, element_west: str, modality: str) -> float:
+    def judge_western_deep(
+        num: int,
+        max_main: int,
+        element_west: str,
+        modality: str,
+        ruling_planet: str = "",
+        transit_data: Dict[str, Any] = None,
+        natal_data: Dict[str, Any] = None
+    ) -> float:
+        # Lớp 1: Nguyên tố cung Mặt Trời (Natal Sun Element)
         score_elem = 0.5
         if element_west == "Hỏa":
             score_elem = 1.0 if (num % 3 == 0 or num in [1, 7, 11, 19, 23, 31, 37, 41, 47, 53]) else 0.4
@@ -814,19 +1165,68 @@ class FlexibleCouncilEvaluator:
             score_elem = 1.0 if (num % 5 == 0 or num % 2 == 0) else 0.4
         elif element_west == "Khí":
             score_elem = 1.0 if (num % 4 == 0 or num % 7 == 0 or num in [2, 13, 17, 29, 31, 43]) else 0.4
-        else: 
+        else:
             score_elem = 1.0 if (num % 2 != 0 or num % 6 == 0 or num in [3, 9, 15, 21, 27, 33, 39, 45, 51]) else 0.4
 
+        # Lớp 2: Phẩm tính vận động (Natal Modality) theo dải game
         score_mod = 0.5
         ratio = num / max_main
-        if "Tiên phong" in modality: 
+        if "Tiên phong" in modality:
             score_mod = 1.0 if ratio <= 0.35 else 0.45
-        elif "Kiên định" in modality: 
+        elif "Kiên định" in modality:
             score_mod = 1.0 if 0.30 <= ratio <= 0.70 else 0.45
-        else: 
+        else:
             score_mod = 1.0 if ratio >= 0.65 else 0.45
 
-        return (score_elem * 0.65) + (score_mod * 0.35)
+        # Lớp 3: Hành tinh chủ quản
+        ruler_bonus = 0.55
+        r_low = (ruling_planet or "").lower()
+        if "hỏa" in r_low or "mars" in r_low:
+            ruler_bonus = 0.9 if (num % 2 == 1) else 0.45
+        elif "kim" in r_low or "venus" in r_low:
+            ruler_bonus = 0.9 if (num % 6 in [0, 2, 4]) else 0.5
+        elif "thủy" in r_low or "mercury" in r_low:
+            ruler_bonus = 0.9 if ((num // 10 + num % 10) % 3 == 0) else 0.5
+        elif "mặt trăng" in r_low or "moon" in r_low:
+            ruler_bonus = 0.9 if (num <= max(12, max_main // 3)) else 0.5
+        elif "mặt trời" in r_low or "sun" in r_low:
+            ruler_bonus = 0.9 if (num % 5 == 0 or num % 3 == 0) else 0.5
+        elif "mộc" in r_low or "jupiter" in r_low:
+            ruler_bonus = 0.9 if (num % 4 == 0 or num % 7 == 0) else 0.5
+        elif "thổ" in r_low or "saturn" in r_low:
+            ruler_bonus = 0.9 if (num % 7 == 0 or num % 5 == 0) else 0.5
+        else:
+            ruler_bonus = 0.85 if (num % 9 in [0, 2, 7]) else 0.5
+
+        # Lớp 4: Transit Chart tại thời điểm quay
+        transit_score = 0.6
+        if transit_data and transit_data.get("bodies"):
+            moon_elem = transit_data["bodies"].get("Moon", {}).get("element", "")
+            sun_elem = transit_data["bodies"].get("Sun", {}).get("element", "")
+            moon_deg = transit_data["bodies"].get("Moon", {}).get("deg_in_sign", 15.0)
+            elem_match = 1.0 if (moon_elem == element_west or sun_elem == element_west) else 0.55
+            deg_match = 0.9 if abs((num % 30) - moon_deg) <= 6 else 0.5
+            transit_score = 0.6 * elem_match + 0.4 * deg_match
+
+        # Khi có giờ sinh: bật thêm lớp đối chiếu Natal Moon & Natal Ascendant (AC)
+        if natal_data and natal_data.get("has_exact_time"):
+            n_moon = natal_data.get("bodies", {}).get("Moon", {})
+            n_asc = natal_data.get("ascendant", {})
+            n_moon_deg = n_moon.get("deg_in_sign", 15.0)
+            n_asc_num = n_asc.get("sign_num", 1)
+            natal_deg_hit = 0.95 if abs((num % 30) - n_moon_deg) <= 6 else 0.5
+            natal_ac_hit = 0.90 if ((num - 1) % 12 + 1) == n_asc_num else 0.55
+            natal_score = 0.55 * natal_deg_hit + 0.45 * natal_ac_hit
+            return (
+                (score_elem * 0.32)
+                + (score_mod * 0.20)
+                + (ruler_bonus * 0.13)
+                + (transit_score * 0.17)
+                + (natal_score * 0.18)
+            )
+
+        # Khi bỏ trống giờ sinh: lược bớt lớp Natal AC/Natal Moon theo giờ sinh, tự tái phân bổ trọng số (như giới tính không xác định)
+        return (score_elem * 0.40) + (score_mod * 0.25) + (ruler_bonus * 0.15) + (transit_score * 0.20)
 
     @staticmethod
     def judge_statistics_hot_cold(num: int, freq_map: Dict[int, int], strategy: str) -> float:
@@ -944,9 +1344,61 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
         byear = st.selectbox("Năm sinh", list(range(2026, 1939, -1)), index=36)
     
     dob_str = f"{bday:02d}/{bmonth:02d}/{byear}"
+
+    st.markdown("🕰️ **Giờ sinh cá nhân (Tùy chọn — dùng tính Cung Mọc Natal AC & Mặt Trăng lúc sinh):**")
+    birth_time_mode = st.radio(
+        "Chế độ giờ sinh",
+        ["Không rõ / Bỏ trống (Lược bớt Natal AC & Moon)", "Có giờ sinh (Bật đầy đủ Natal Chart)"],
+        horizontal=True
+    )
+    if birth_time_mode.startswith("Có giờ sinh"):
+        col_bh, col_bm_min = st.columns(2)
+        with col_bh:
+            bhour = st.selectbox("Giờ sinh (0-23)", list(range(0, 24)), index=12)
+        with col_bm_min:
+            bminute = st.selectbox("Phút sinh (0-59)", list(range(0, 60)), index=0)
+        has_birth_time = True
+        birth_time_label = f"{bhour:02d}:{bminute:02d}"
+    else:
+        bhour, bminute = 12, 0
+        has_birth_time = False
+        birth_time_label = "Bỏ trống (Không rõ giờ sinh)"
+
     gender = st.radio("Giới tính", ["Nam", "Nữ", "Không xác định / Khác"], horizontal=True)
-    
+
+    st.markdown("---")
+    st.markdown("📍 **Vị trí lập Bản đồ sao Chiêm tinh (Transit / Event Chart):**")
+    st.caption(
+        "Tọa độ địa lý xác định điểm quan sát trên bề mặt Trái Đất tại thời điểm quay để lập bản đồ sao thiên văn "
+        "(không yêu cầu nhớ giờ sinh). Bạn có thể chọn nhanh 1 trong 34 tỉnh/thành hoặc dán tọa độ từ Zalo/Google Maps "
+        "để dùng cho mọi địa điểm trên thế giới."
+    )
+    province_names = list(VIETNAM_PROVINCES_34.keys())
+    selected_province = st.selectbox("Chọn nhanh Tỉnh / Thành phố (34 đơn vị)", province_names, index=0)
+    pasted_coord_input = st.text_input(
+        "📋 Dán tọa độ từ Zalo / Google Maps (tùy chọn — hỗ trợ mọi nơi trên thế giới)",
+        value="",
+        placeholder="Ví dụ: 10.8231, 106.6297 hoặc link/chuỗi vị trí có @lat,lon"
+    )
+    fb_lat, fb_lon = VIETNAM_PROVINCES_34[selected_province]
+    active_lat, active_lon, is_pasted_valid, coord_source_label = parse_pasted_coordinates(
+        pasted_coord_input, fb_lat, fb_lon
+    )
+    location_display_name = f"Tọa độ dán ({active_lat}, {active_lon})" if is_pasted_valid else f"{selected_province} ({active_lat}, {active_lon})"
+    st.caption(f"🌐 Điểm quan sát đang dùng: **{location_display_name}** — *{coord_source_label}*")
+
     profile = PhongThuyReferenceCore.get_full_info(dob_str, gender, draw_dt)
+    transit_chart = TransitAstrologyCore.compute_transit_chart(draw_dt, active_lat, active_lon)
+    natal_chart = (
+        TransitAstrologyCore.compute_natal_chart(bday, bmonth, byear, bhour, bminute, active_lat, active_lon)
+        if has_birth_time
+        else None
+    )
+    profile["transit_chart"] = transit_chart
+    profile["natal_chart"] = natal_chart
+    profile["has_birth_time"] = has_birth_time
+    profile["birth_time_label"] = birth_time_label
+    profile["location_name"] = location_display_name
     
     cung_phi_display_line = f"🏛️ <b>Cung Mệnh (Cung Phi):</b> {profile['cung_phi']}<br>" if gender != "Không xác định / Khác" else f"🏳️‍🌈 <b>Bản dạng giới:</b> Không xác định (Đã trung hòa năng lượng Cung Phi, giữ trọn vẹn Can Chi & Nạp Âm bẩm sinh)<br>"
 
@@ -958,7 +1410,8 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
         🌟 <b>Chiêm tinh Phương Tây 3 Tầng:</b> Cung <b>{profile['western_sign']}</b><br>
         &nbsp;&nbsp;&nbsp;&nbsp;• <i>Tứ đại Nguyên tố:</i> <b>{profile['element_west']}</b> &nbsp;|&nbsp; <i>Phẩm tính:</i> <b>{profile['modality']}</b><br>
         &nbsp;&nbsp;&nbsp;&nbsp;• <i>Hành tinh chiếu mệnh:</i> <b>{profile['ruling_planet']}</b><br>
-        ⚡ <b>Hành ngày quay:</b> {profile['draw_elem']}
+        ⚡ <b>Hành ngày quay:</b> {profile['draw_elem']}<br>
+        🕰️ <b>Giờ sinh &amp; Natal Chart:</b> {profile['birth_time_label']}{f" — Cung Mọc sinh: <b>{profile['natal_chart']['ascendant']['sign']} ({profile['natal_chart']['ascendant']['deg_in_sign']}°)</b> | Mặt Trăng sinh: <b>{profile['natal_chart']['bodies']['Moon']['sign']} ({profile['natal_chart']['bodies']['Moon']['deg_in_sign']}°)</b>" if profile.get("natal_chart") else " <i>(Đã lược bớt Natal AC &amp; Natal Moon; vẫn giữ Transit Chart theo kỳ quay &amp; Cung Mặt Trời)</i>"}
     </div>
     """, unsafe_allow_html=True)
 
@@ -1079,7 +1532,7 @@ if run_clicked:
             s_east = FlexibleCouncilEvaluator.judge_eastern(num, profile["menh_elem"])
             total_score += s_east * weights.get("eastern", 0)
         if "western" in active_councils:
-            s_west = FlexibleCouncilEvaluator.judge_western_deep(num, max_main, profile["element_west"], profile["modality"])
+            s_west = FlexibleCouncilEvaluator.judge_western_deep(num, max_main, profile["element_west"], profile["modality"], profile["ruling_planet"], profile.get("transit_chart"), profile.get("natal_chart"))
             total_score += s_west * weights.get("western", 0)
         if "statistics" in active_councils:
             s_stat = FlexibleCouncilEvaluator.judge_statistics_hot_cold(num, freq_map, hc_strategy)
@@ -1111,7 +1564,16 @@ if run_clicked:
             "west_score": round(base_score + rnd.uniform(0.1, 0.8), 1),
             "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
             "detail_east": detail_east_text,
-            "detail_west": f"Ma trận Chiêm Tinh 3 Tầng: Cung {profile['western_sign']} (Nguyên tố {profile['element_west']} | Phẩm tính {profile['modality']} | Chiếu mệnh {profile['ruling_planet']}).",
+            "detail_west": (
+                f"Cung {profile['western_sign']} ({profile['element_west']} | {profile['modality']} | Chủ quản {profile['ruling_planet']}) "
+                f"+ Transit lúc quay tại {profile['location_name']}: Mặt Trăng ở {profile['transit_chart']['bodies']['Moon']['sign']} "
+                f"({profile['transit_chart']['bodies']['Moon']['deg_in_sign']}°), Cung Mọc {profile['transit_chart']['ascendant']['sign']}"
+                + (
+                    f" + Natal ({profile['birth_time_label']}): AC {profile['natal_chart']['ascendant']['sign']} & Moon {profile['natal_chart']['bodies']['Moon']['sign']}."
+                    if profile.get("natal_chart")
+                    else " (lược bớt Natal AC/Moon do bỏ trống giờ sinh)."
+                )
+            ),
             "detail_stat": f"Tầm nhìn {len(history_data)} kỳ thật: Khớp chiến lược {hc_strategy.split(' ')[1]}."
         })
 
@@ -1164,6 +1626,33 @@ if run_clicked:
         'numbers': results[0]['set'] if results else [],
         'profile': profile
     }
+
+    with st.expander("🌌 Bản đồ sao Chiêm tinh Thời điểm quay (Transit Chart)", expanded=True):
+        tc = profile["transit_chart"]
+        moon_b = tc["bodies"]["Moon"]
+        sun_b = tc["bodies"]["Sun"]
+        st.markdown(
+            f"📍 **Điểm quan sát:** `{profile['location_name']}` | "
+            f"🕒 **Thời điểm quay:** `{profile['draw_datetime']}` | "
+            f"🌅 **Cung Mọc (AC):** `{tc['ascendant']['sign']} ({tc['ascendant']['deg_in_sign']}°)`"
+        )
+        st.markdown(
+            f"☀️ **Mặt Trời Transit:** `{sun_b['sign']} ({sun_b['deg_in_sign']}° — {sun_b['element']})` &nbsp;|&nbsp; "
+            f"🌙 **Mặt Trăng Transit:** `{moon_b['sign']} ({moon_b['deg_in_sign']}° — {moon_b['element']})`"
+        )
+        fig_chart = TransitAstrologyCore.render_chart_figure(tc, user_sign=profile["western_sign"])
+        st.pyplot(fig_chart, use_container_width=True)
+        if tc["aspects"]:
+            asp_lines = [f"• {a['p1']} — {a['p2']}: **{a['aspect']}** (sai số {a['orb']}°)" for a in tc["aspects"]]
+            st.markdown("**📐 Góc chiếu thiên văn đáng chú ý lúc quay:**\n" + "\n".join(asp_lines))
+        if profile.get("natal_chart"):
+            nc = profile["natal_chart"]
+            st.markdown(
+                f"🧭 **Lá số sinh cá nhân ({nc['birth_datetime']}):** Cung Mọc sinh **`{nc['ascendant']['sign']} ({nc['ascendant']['deg_in_sign']}°)`** | "
+                f"Mặt Trăng sinh **`{nc['bodies']['Moon']['sign']} ({nc['bodies']['Moon']['deg_in_sign']}°)`**"
+            )
+        else:
+            st.caption("ℹ️ *Giờ sinh đang bỏ trống: hệ thống giữ nguyên Transit Chart theo kỳ quay & tọa độ, lược bớt lớp Natal AC / Natal Moon cá nhân.*")
 
 st.divider()
 
