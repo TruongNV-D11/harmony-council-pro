@@ -285,9 +285,9 @@ def fetch_html(url: str) -> str:
 
 def parse_history_from_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     """
-    Trích xuất kết quả quay số từ HTML bằng 2 chiến lược kết hợp:
-    1. Bắt theo cụm thẻ bóng số / kết quả đa dòng (DOM tag blocks).
-    2. Bắt theo dòng văn bản sau khi làm sạch thẻ HTML (tag-stripped blocks quanh dấu mốc ngày/kỳ quay).
+    Khôi phục luồng parse kiểu v1.7.1: lọc các dòng/khối chứa từ khóa kết quả
+    ('kq-ketqua', 'result', 'vnn', 'chuoi'), trích xuất số \b\d{1,2}\b trong phạm vi hợp lệ,
+    và dự phòng quét khối thẻ số nếu DOM dùng tên class khác.
     """
     history = []
     if not html:
@@ -299,25 +299,53 @@ def parse_history_from_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     spec_max = game_cfg.get("special_max", 12)
     req_len = pick_n + (1 if has_spec else 0)
 
-    # Làm sạch script/style trước khi phân tích
-    clean_html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    seen_sets = set()
+    draw_id = 9999
 
-    # Chiến lược 1: Tìm các khối HTML chứa danh sách bóng kết quả (thường nằm trong <ul>, <div>, <tr>)
-    # Gộp các thẻ <li> hoặc <span> chứa số 2 chữ số liên tiếp nhau
+    # Nhánh 1 (Chuẩn v1.7.1): Lọc từng dòng chứa từ khóa kết quả
+    keywords = ("kq-ketqua", "result", "vnn", "chuoi")
+    for raw_line in html.splitlines():
+        low = raw_line.lower()
+        if any(k in low for k in keywords):
+            text_line = re.sub(r"<[^>]+>", " ", raw_line)
+            nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", text_line)]
+            valid_mains = []
+            for n in nums:
+                if 1 <= n <= max_m and n not in valid_mains:
+                    valid_mains.append(n)
+                    if len(valid_mains) == pick_n:
+                        break
+            if len(valid_mains) >= pick_n:
+                mains = sorted(valid_mains[:pick_n])
+                spec_val = None
+                if has_spec:
+                    for n in nums[pick_n:]:
+                        if 1 <= n <= spec_max:
+                            spec_val = n
+                            break
+                sig = (tuple(mains), spec_val)
+                if sig not in seen_sets:
+                    seen_sets.add(sig)
+                    entry = {"draw": draw_id, "mains": mains}
+                    if has_spec and spec_val is not None:
+                        entry["special"] = spec_val
+                    history.append(entry)
+                    draw_id -= 1
+
+    if history:
+        return history
+
+    # Nhánh 2 (Fallback nếu trang chia bóng qua nhiều dòng/thẻ): Gom cụm thẻ chứa số
+    clean_html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
     ball_groups = re.findall(
         r"(?:<(?:li|span|div|td)[^>]*>\s*\d{1,2}\s*</(?:li|span|div|td)>\s*){" + str(req_len) + r",8}",
         clean_html,
         flags=re.IGNORECASE
     )
-
-    seen_sets = set()
-    draw_id = 9999
-
     for grp in ball_groups:
         nums = [int(x) for x in re.findall(r">\s*(\d{1,2})\s*<", grp)]
         if len(nums) >= req_len:
             mains_raw = nums[:pick_n]
-            # Kiểm tra tính hợp lệ: các số chính phải phân biệt và nằm trong [1, max_m]
             if len(set(mains_raw)) == pick_n and all(1 <= n <= max_m for n in mains_raw):
                 mains = sorted(mains_raw)
                 spec_val = nums[pick_n] if has_spec else None
@@ -331,36 +359,6 @@ def parse_history_from_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
                         entry["special"] = spec_val
                     history.append(entry)
                     draw_id -= 1
-
-    if len(history) >= 1:
-        return history
-
-    # Chiến lược 2: Chuyển HTML thành văn bản thuần theo khối và tìm cụm số ngay sau mốc kỳ quay / ngày tháng
-    text_only = re.sub(r"<[^>]+>", " ", clean_html)
-    text_only = re.sub(r"\s+", " ", text_only)
-
-    # Tìm các đoạn theo sau mẫu ngày dd/mm/yyyy hoặc mã kỳ #00xxx
-    segments = re.split(r"(?:#\d{4,6}|\b\d{1,2}/\d{1,2}/20\d{2}\b)", text_only)
-    for seg in segments[1:]:
-        window = seg[:160]
-        tokens = [int(x) for x in re.findall(r"\b\d{1,2}\b", window)]
-        # Tìm cửa sổ con dài req_len thỏa mãn bộ số hợp lệ
-        for idx in range(max(0, len(tokens) - req_len + 1)):
-            cand_main = tokens[idx : idx + pick_n]
-            if len(set(cand_main)) == pick_n and all(1 <= n <= max_m for n in cand_main):
-                spec_val = tokens[idx + pick_n] if (has_spec and idx + pick_n < len(tokens)) else None
-                if has_spec and (spec_val is None or not (1 <= spec_val <= spec_max)):
-                    continue
-                mains = sorted(cand_main)
-                sig = (tuple(mains), spec_val)
-                if sig not in seen_sets:
-                    seen_sets.add(sig)
-                    entry = {"draw": draw_id, "mains": mains}
-                    if has_spec:
-                        entry["special"] = spec_val
-                    history.append(entry)
-                    draw_id -= 1
-                break
 
     return history
 
