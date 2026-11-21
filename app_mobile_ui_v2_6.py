@@ -168,11 +168,12 @@ GAMES = {
         "has_special": True, "special_max": 12,
         "draw_type": "daily_twice",
         "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
+        "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
         "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power535.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
-            "https://xoso.me/ket-qua/5-35.html",
             "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
+            "https://xoso.me/ket-qua/5-35.html",
             "https://ketqua.net/xo-so-vietlott-5-35",
             "https://www.kqxs.vn/xo-so-vietlott-5-35",
         ],
@@ -185,9 +186,11 @@ GAMES = {
         "draw_days": [2, 4, 6],
         "draw_type": "weekly",
         "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/mega-645.html",
+        "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
         "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power645.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/mega-645.html",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
             "https://xoso.me/ket-qua/mega-6-45.html",
             "https://ketqua.net/xo-so-vietlott-mega-6-45",
         ],
@@ -200,9 +203,11 @@ GAMES = {
         "draw_days": [1, 3, 5],
         "draw_type": "weekly",
         "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/power-655.html",
+        "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
         "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power655.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/power-655.html",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
             "https://xoso.me/ket-qua/power-6-55.html",
             "https://ketqua.net/xo-so-vietlott-power-6-55",
         ],
@@ -284,15 +289,84 @@ def fetch_html(url: str, timeout: int = 8) -> str:
         pass
     return ""
 
-def parse_history_from_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
+def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     """
-    Trích xuất lịch sử kỳ quay theo logic v1.7.1-Final:
-    tìm toàn bộ số \b\d{1,2}\b trong [1, max_main] và gom từng nhóm `pick` số chính.
+    Parser chuyên biệt cho nguồn vietlott.vn: bóc các dòng/khối kết quả và ngày kỳ quay
+    (nếu có) rồi chuẩn hóa về bản ghi thống nhất {"draw", "date", "mains", "special"?}.
     """
-    history: List[Dict[str, Any]] = []
+    records: List[Dict[str, Any]] = []
     if not html:
-        return history
+        return records
 
+    pick_n = game_cfg["pick"]
+    max_m = game_cfg["max_main"]
+    has_spec = game_cfg.get("has_special", False)
+    spec_max = game_cfg.get("special_max", 12)
+
+    clean_text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    dates_found = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", clean_text)
+
+    # Tìm các cụm thẻ bóng/số liền kề trong bảng kết quả của vietlott.vn
+    ball_blocks = re.findall(
+        r"(?:<(?:span|li|td|div|b|strong)[^>]*>\s*\d{1,2}\s*</(?:span|li|td|div|b|strong)>\s*){" + str(pick_n) + r",8}",
+        clean_text,
+        flags=re.IGNORECASE
+    )
+
+    draw_id = 9999
+    for idx, grp in enumerate(ball_blocks):
+        raw_nums = [int(x) for x in re.findall(r">\s*(\d{1,2})\s*<", grp)]
+        mains_raw = []
+        for n in raw_nums:
+            if 1 <= n <= max_m and n not in mains_raw:
+                mains_raw.append(n)
+                if len(mains_raw) == pick_n:
+                    break
+        if len(mains_raw) == pick_n:
+            entry: Dict[str, Any] = {
+                "draw": draw_id,
+                "date": dates_found[idx] if idx < len(dates_found) else "",
+                "mains": sorted(mains_raw),
+            }
+            if has_spec:
+                for n in raw_nums[pick_n:]:
+                    if 1 <= n <= spec_max:
+                        entry["special"] = n
+                        break
+            records.append(entry)
+            draw_id -= 1
+
+    if records:
+        return records
+
+    # Dự phòng nếu vietlott.vn trả về văn bản/JSON nhúng
+    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", re.sub(r"<[^>]+>", " ", clean_text))]
+    valid_nums = [n for n in all_nums if 1 <= n <= max_m]
+    for i in range(0, len(valid_nums), pick_n):
+        seg = valid_nums[i : i + pick_n]
+        if len(seg) == pick_n:
+            records.append({
+                "draw": draw_id,
+                "date": dates_found[len(records)] if len(records) < len(dates_found) else "",
+                "mains": sorted(seg),
+            })
+            draw_id -= 1
+
+    return records
+
+def parse_history_from_html(html: str, game_cfg: dict, source_url: str = "") -> List[Dict[str, Any]]:
+    """
+    Điều phối parser theo nguồn web trực tiếp (hỗ trợ riêng vietlott.vn và chuẩn v1.7.1-Final).
+    """
+    if not html:
+        return []
+
+    if "vietlott.vn" in (source_url or "").lower():
+        vn_parsed = parse_vietlott_vn_html(html, game_cfg)
+        if vn_parsed:
+            return vn_parsed
+
+    history: List[Dict[str, Any]] = []
     pick_n = game_cfg["pick"]
     max_m = game_cfg["max_main"]
 
@@ -363,7 +437,7 @@ def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) 
     urls = [game_cfg.get("url")] + game_cfg.get("backups", [])
     for url in dict.fromkeys(u for u in urls if u):
         html = fetch_html(url)
-        parsed = parse_history_from_html(html, game_cfg)
+        parsed = parse_history_from_html(html, game_cfg, source_url=url)
         if len(parsed) >= 1:
             live_fetched = parsed
             active_source_url = url.split("/")[2]
