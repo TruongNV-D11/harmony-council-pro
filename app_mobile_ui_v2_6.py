@@ -154,8 +154,10 @@ CACHE_DIR = os.path.join(BASE_DIR, "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 DEFAULT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Accept-Language": "vi-VN, en-US;q=0.9",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Referer": "https://www.google.com/",
 }
 
 GAMES = {
@@ -170,6 +172,8 @@ GAMES = {
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
             "https://xoso.me/ket-qua/5-35.html",
+            "https://ketqua.net/xo-so-vietlott-5-35",
+            "https://www.kqxs.vn/xo-so-vietlott-5-35",
         ],
     },
     "6x45": {
@@ -183,6 +187,8 @@ GAMES = {
         "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power645.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/mega-645.html",
+            "https://xoso.me/ket-qua/mega-6-45.html",
+            "https://ketqua.net/xo-so-vietlott-mega-6-45",
         ],
     },
     "6x55": {
@@ -196,6 +202,8 @@ GAMES = {
         "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power655.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/power-655.html",
+            "https://xoso.me/ket-qua/power-6-55.html",
+            "https://ketqua.net/xo-so-vietlott-power-6-55",
         ],
     },
 }
@@ -267,7 +275,7 @@ def fetch_github_seed_data(github_url: str, game_cfg: dict) -> List[Dict[str, An
 
 def fetch_html(url: str) -> str:
     try:
-        resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=8)
+        resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
         if resp.status_code == 200 and len(resp.text) > 300:
             return resp.text
     except Exception:
@@ -275,37 +283,103 @@ def fetch_html(url: str) -> str:
     return ""
 
 def parse_history_from_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
-    """Trích xuất kết quả mới nhất từ HTML theo logic v1.7.1."""
+    """
+    Trích xuất kết quả quay số từ HTML bằng 2 chiến lược kết hợp:
+    1. Bắt theo cụm thẻ bóng số / kết quả đa dòng (DOM tag blocks).
+    2. Bắt theo dòng văn bản sau khi làm sạch thẻ HTML (tag-stripped blocks quanh dấu mốc ngày/kỳ quay).
+    """
     history = []
     if not html:
         return history
-    lines = html.split("\n")
+
+    pick_n = game_cfg["pick"]
+    max_m = game_cfg["max_main"]
+    has_spec = game_cfg.get("has_special", False)
+    spec_max = game_cfg.get("special_max", 12)
+    req_len = pick_n + (1 if has_spec else 0)
+
+    # Làm sạch script/style trước khi phân tích
+    clean_html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+
+    # Chiến lược 1: Tìm các khối HTML chứa danh sách bóng kết quả (thường nằm trong <ul>, <div>, <tr>)
+    # Gộp các thẻ <li> hoặc <span> chứa số 2 chữ số liên tiếp nhau
+    ball_groups = re.findall(
+        r"(?:<(?:li|span|div|td)[^>]*>\s*\d{1,2}\s*</(?:li|span|div|td)>\s*){" + str(req_len) + r",8}",
+        clean_html,
+        flags=re.IGNORECASE
+    )
+
+    seen_sets = set()
     draw_id = 9999
-    for line in lines:
-        if any(w in line for w in ["kq-ketqua", "result", "vnn", "chuoi"]):
-            nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", line)]
-            valid = [n for n in nums if 1 <= n <= game_cfg["max_main"]]
-            if len(valid) >= game_cfg["pick"]:
-                mains = sorted(valid[:game_cfg["pick"]])
-                entry = {"draw": draw_id, "mains": mains}
-                if game_cfg.get("has_special") and len(valid) > game_cfg["pick"]:
-                    entry["special"] = valid[game_cfg["pick"]]
-                history.append(entry)
-                draw_id -= 1
+
+    for grp in ball_groups:
+        nums = [int(x) for x in re.findall(r">\s*(\d{1,2})\s*<", grp)]
+        if len(nums) >= req_len:
+            mains_raw = nums[:pick_n]
+            # Kiểm tra tính hợp lệ: các số chính phải phân biệt và nằm trong [1, max_m]
+            if len(set(mains_raw)) == pick_n and all(1 <= n <= max_m for n in mains_raw):
+                mains = sorted(mains_raw)
+                spec_val = nums[pick_n] if has_spec else None
+                if has_spec and not (1 <= spec_val <= spec_max):
+                    continue
+                sig = (tuple(mains), spec_val)
+                if sig not in seen_sets:
+                    seen_sets.add(sig)
+                    entry = {"draw": draw_id, "mains": mains}
+                    if has_spec:
+                        entry["special"] = spec_val
+                    history.append(entry)
+                    draw_id -= 1
+
+    if len(history) >= 1:
+        return history
+
+    # Chiến lược 2: Chuyển HTML thành văn bản thuần theo khối và tìm cụm số ngay sau mốc kỳ quay / ngày tháng
+    text_only = re.sub(r"<[^>]+>", " ", clean_html)
+    text_only = re.sub(r"\s+", " ", text_only)
+
+    # Tìm các đoạn theo sau mẫu ngày dd/mm/yyyy hoặc mã kỳ #00xxx
+    segments = re.split(r"(?:#\d{4,6}|\b\d{1,2}/\d{1,2}/20\d{2}\b)", text_only)
+    for seg in segments[1:]:
+        window = seg[:160]
+        tokens = [int(x) for x in re.findall(r"\b\d{1,2}\b", window)]
+        # Tìm cửa sổ con dài req_len thỏa mãn bộ số hợp lệ
+        for idx in range(max(0, len(tokens) - req_len + 1)):
+            cand_main = tokens[idx : idx + pick_n]
+            if len(set(cand_main)) == pick_n and all(1 <= n <= max_m for n in cand_main):
+                spec_val = tokens[idx + pick_n] if (has_spec and idx + pick_n < len(tokens)) else None
+                if has_spec and (spec_val is None or not (1 <= spec_val <= spec_max)):
+                    continue
+                mains = sorted(cand_main)
+                sig = (tuple(mains), spec_val)
+                if sig not in seen_sets:
+                    seen_sets.add(sig)
+                    entry = {"draw": draw_id, "mains": mains}
+                    if has_spec:
+                        entry["special"] = spec_val
+                    history.append(entry)
+                    draw_id -= 1
+                break
+
     return history
 
 def _merge_unique_history(primary: List[Dict[str, Any]], secondary: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Gộp dữ liệu và khử trùng lặp dựa trên bộ số chính."""
+    """Gộp dữ liệu và khử trùng lặp dựa trên bộ số chính + số đặc biệt."""
     merged = []
     seen = set()
     for item in primary + secondary:
-        key = tuple(item["mains"])
+        key = (tuple(item["mains"]), item.get("special"))
         if key not in seen:
             seen.add(key)
             merged.append(item)
     return merged
 
 def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str, float]:
+    """
+    Ưu tiên tuyệt đối FetchData trực tiếp (Live Web) để lấy kết quả gần nhất.
+    - Nếu FetchData trực tiếp thành công: đưa dữ liệu mới nhất lên đầu, gộp với Smart Cache (và GitHub Seed nếu cần đủ tầm nhìn).
+    - Nếu FetchData trực tiếp lỗi/không bắt được dữ liệu: dùng Smart Cache hiện có; nếu vẫn chưa đủ kỳ thì mới gọi GitHub Backup Seed.
+    """
     game_cfg = GAMES.get(game_key)
     if not game_cfg:
         return [], "Game không tồn tại", 0.0
@@ -335,47 +409,50 @@ def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) 
     if cache_is_fresh:
         return existing_cache[:sample_k], f"📁 Smart Cache Mới nhất ({len(existing_cache)} kỳ thật)", cache_age
 
-    # Tầng 1: Nếu cache trống hoặc thiếu dữ liệu dài kỳ, nạp trước từ GitHub Backup Seed
-    github_seed = []
-    if len(existing_cache) < sample_k and game_cfg.get("github_jsonl"):
-        github_seed = fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg)
-
-    # Tầng 2: Quét kết quả mới nhất từ nguồn web (v1.7.1)
+    # Bước 1 (Chủ động): Luôn chạy FetchData trực tiếp từ nguồn web để lấy kết quả gần nhất
     live_fetched = []
+    active_source_url = ""
     urls = [game_cfg.get("url")] + game_cfg.get("backups", [])
     for url in dict.fromkeys(u for u in urls if u):
         html = fetch_html(url)
         parsed = parse_history_from_html(html, game_cfg)
-        if len(parsed) >= 3:
+        if len(parsed) >= 1:
             live_fetched = parsed
+            active_source_url = url.split("/")[2]
             break
 
-    # Tầng 3: Hợp nhất Live Web -> Existing Cache -> GitHub Seed
+    # Bước 2 (Backup): Chỉ lấy GitHub Seed khi FetchData trực tiếp gặp lỗi/thiếu dữ liệu và cache chưa đủ kỳ
+    github_seed = []
+    current_pool_len = len(live_fetched) + len(existing_cache)
+    if (not live_fetched or current_pool_len < sample_k) and game_cfg.get("github_jsonl"):
+        github_seed = fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg)
+
+    # Bước 3: Hợp nhất ưu tiên Live FetchData -> Existing Cache -> GitHub Backup Seed
     combined = _merge_unique_history(live_fetched, _merge_unique_history(existing_cache, github_seed))
 
     if combined:
         try:
             with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(combined, f, ensure_ascii=False)
-            if live_fetched or github_seed:
+            if live_fetched:
                 with open(meta_file, "w", encoding="utf-8") as f:
                     json.dump({"latest_date": expected_latest_date.strftime("%Y-%m-%d")}, f)
                 cache_age = 0.0
         except Exception:
             pass
 
-        if live_fetched and github_seed:
-            status = f"🟢 Live Web + GitHub Seed (Tích lũy {len(combined)} kỳ thật)"
-        elif live_fetched:
-            status = f"🟢 Real Trực tuyến v1.7.1 (Tích lũy {len(combined)} kỳ thật)"
+        if live_fetched:
+            status = f"🟢 FetchData Trực tuyến ({active_source_url}) — Cập nhật kỳ gần nhất (Tích lũy {len(combined)} kỳ thật)"
+        elif existing_cache and github_seed:
+            status = f"🛡️ FetchData lỗi -> Smart Cache + GitHub Backup ({len(combined)} kỳ thật)"
         elif github_seed:
-            status = f"📦 GitHub Backup Data ({len(combined)} kỳ lịch sử thật)"
+            status = f"🛡️ FetchData lỗi -> GitHub Backup Data ({len(combined)} kỳ lịch sử thật)"
         else:
-            status = f"📁 Smart Cache Dự phòng ({len(combined)} kỳ thật - Offline)"
+            status = f"🛡️ FetchData lỗi -> Smart Cache Dự phòng ({len(combined)} kỳ thật)"
 
         return combined[:sample_k], status, cache_age
 
-    return [], "⚠️ Không thể kết nối nguồn dữ liệu thật (Kiểm tra mạng hoặc nguồn HTML)", 0.0
+    return [], "⚠️ FetchData trực tiếp thất bại và không có dữ liệu Cache/Backup khả dụng", 0.0
 
 
 # =====================================================================
@@ -687,7 +764,7 @@ st.markdown("""
     <b>📜 TRÍCH YẾU HỌC THUẬT & HỆ THỐNG TÍCH HỢP:</b><br>
     • <b>Hội đồng Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp, Bản mệnh Nạp Âm & Cung Phi Lạc Thư (Tôn trọng đa dạng giới tính với cơ chế trung hòa trọng số động).<br>
     • <b>Hội đồng Phương Tây:</b> Chiêm tinh cổ điển 3 Tầng — Tứ đại Nguyên tố (Triplicities), Phẩm tính Vận động (Modalities: Cardinal/Fixed/Mutable) & Hành tinh Đắc vị.<br>
-    • <b>Hội đồng Thống kê Ma trận:</b> Phân tích tần suất lịch sử đa chiều trên dữ liệu thật 3 tầng (GitHub Seed + Live Web + Smart Cache) với chiến lược động (Hot / Neutral / Cold).<br>
+    • <b>Hội đồng Thống kê Ma trận:</b> Phân tích tần suất lịch sử đa chiều ưu tiên FetchData trực tiếp lấy kỳ gần nhất, Smart Cache tích lũy và GitHub Backup khi lỗi với chiến lược động (Hot / Neutral / Cold).<br>
     • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia tư vấn hành vi độc lập theo thời điểm động tâm thực tế (Real-time VN_TZ) — phân định Vùng Cát / Bình / Bĩ gắn liền trạng thái quẻ Thể-Dụng làm lớp phanh an toàn quản trị vốn.<br>
     • <b>Trợ lý AI Gemini Engine:</b> Giao thức REST API chuẩn hóa giải mã mã nguồn, luận giải thuật toán và cố vấn kỷ luật tài chính dưới lăng kính xã hội học.
 </div>
@@ -782,7 +859,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
     st.markdown("---")
     st.markdown("📊 **Cấu hình Tầm nhìn Lịch sử & Khẩu vị Thống kê:**")
     horizon_samples = st.slider("🔍 Tầm nhìn mẫu (Số kỳ quay lịch sử xét duyệt)", min_value=20, max_value=500, value=100, step=10)
-    force_refresh_data = st.checkbox("🔄 Buộc đồng bộ lại dữ liệu mới từ GitHub & Live Web", value=False)
+    force_refresh_data = st.checkbox("🔄 Buộc FetchData lại kết quả mới nhất từ nguồn trực tiếp", value=False)
     
     hc_strategy = st.radio(
         "🎯 Khẩu vị Chiến lược Thống kê",
@@ -820,7 +897,7 @@ if run_clicked:
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    status_text.text("🔄 Đang đồng bộ dữ liệu thật 3 tầng (GitHub Seed + Live Web + Smart Cache)...")
+    status_text.text("🔄 Đang chạy FetchData trực tiếp lấy kết quả gần nhất (kích hoạt Backup nếu lỗi)...")
     progress_bar.progress(25)
     history_data, data_source_status, cache_age_sec = get_history(
         game_key, sample_k=horizon_samples, force_refresh=force_refresh_data
@@ -1066,7 +1143,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                         gemini_system_prompt = (
                             "BẠN LÀ TRỢ LÝ AI KỸ THUẬT & XÃ HỘI HỌC CỦA ỨNG DỤNG 'Vietlott Harmony Edition v2.6'. "
                             "BẠN ĐÃ ĐƯỢC NẠP TOÀN BỘ MÃ NGUỒN VÀ HIỂU RÕ CÁC HÀM: "
-                            "- `get_history` / `fetch_github_seed_data` / `parse_history_from_html`: Lấy dữ liệu thật 3 tầng (GitHub Seed JSONL + Live Web v1.7.1 + Smart Cache tích lũy). "
+                            "- `get_history` / `fetch_github_seed_data` / `parse_history_from_html`: Luôn ưu tiên FetchData trực tiếp lấy kỳ gần nhất, kết hợp Smart Cache và dùng GitHub Seed làm nguồn backup khi FetchData gặp lỗi. "
                             "- `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định). "
                             "- `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố, Phẩm tính Vận động, Hành tinh Đắc vị). "
                             "- `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold trên tập dữ liệu lịch sử thật. "
