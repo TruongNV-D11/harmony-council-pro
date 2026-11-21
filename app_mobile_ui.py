@@ -385,22 +385,85 @@ def parse_history_from_html(html: str, game_cfg: dict, source_url: str = "") -> 
 
     return history
 
-def _merge_unique_history(primary: List[Dict[str, Any]], secondary: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Gộp dữ liệu và khử trùng lặp dựa trên bộ số chính + số đặc biệt."""
-    merged = []
+MAX_CACHE_RECORDS = 2000
+
+def is_valid_record(rec: Any, game_cfg: dict) -> bool:
+    """Validation Gate: kiểm tra định dạng bản ghi trước khi nạp hoặc lưu cache."""
+    if not isinstance(rec, dict):
+        return False
+    pick_n = game_cfg["pick"]
+    max_m = game_cfg["max_main"]
+    mains = rec.get("mains")
+    if not isinstance(mains, list) or len(mains) != pick_n:
+        return False
+    if len(set(mains)) != pick_n:
+        return False
+    if not all(isinstance(x, int) and not isinstance(x, bool) and 1 <= x <= max_m for x in mains):
+        return False
+    if game_cfg.get("has_special") and rec.get("special") is not None:
+        spec = rec.get("special")
+        spec_max = game_cfg.get("special_max", 12)
+        if not (isinstance(spec, int) and not isinstance(spec, bool) and 1 <= spec <= spec_max):
+            return False
+    return True
+
+def _normalize_record(rec: Dict[str, Any], game_cfg: dict) -> Dict[str, Any]:
+    """Chuẩn hóa bản ghi về schema thống nhất trước khi lưu."""
+    out: Dict[str, Any] = {
+        "draw": rec.get("draw", 0),
+        "date": str(rec.get("date", "") or "").strip(),
+        "mains": sorted(int(x) for x in rec["mains"]),
+    }
+    if game_cfg.get("has_special") and rec.get("special") is not None:
+        out["special"] = int(rec["special"])
+    return out
+
+def _atomic_write_json(target_path: str, payload: Any) -> bool:
+    """Ghi file JSON nguyên tử (tmp + flush + fsync + os.replace) chống hỏng file cache."""
+    tmp_path = f"{target_path}.tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, target_path)
+        return True
+    except Exception:
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception:
+            pass
+        return False
+
+def _merge_unique_history(
+    primary: List[Dict[str, Any]],
+    secondary: List[Dict[str, Any]],
+    game_cfg: dict,
+    max_records: int = MAX_CACHE_RECORDS
+) -> List[Dict[str, Any]]:
+    """Lọc hợp lệ, khử trùng lặp và giới hạn trần lưu trữ tối đa max_records kỳ."""
+    merged: List[Dict[str, Any]] = []
     seen = set()
     for item in primary + secondary:
-        key = (tuple(item["mains"]), item.get("special"))
+        if not is_valid_record(item, game_cfg):
+            continue
+        clean_item = _normalize_record(item, game_cfg)
+        date_key = clean_item["date"]
+        key = (date_key, tuple(clean_item["mains"]), clean_item.get("special")) if date_key else (tuple(clean_item["mains"]), clean_item.get("special"))
         if key not in seen:
             seen.add(key)
-            merged.append(item)
+            merged.append(clean_item)
+            if len(merged) >= max_records:
+                break
     return merged
 
-def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str, float]:
+def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str, float]:
     """
     Ưu tiên tuyệt đối FetchData trực tiếp (Live Web) để lấy kết quả gần nhất.
-    - Nếu FetchData trực tiếp thành công: đưa dữ liệu mới nhất lên đầu, gộp với Smart Cache (và GitHub Seed nếu cần đủ tầm nhìn).
-    - Nếu FetchData trực tiếp lỗi/không bắt được dữ liệu: dùng Smart Cache hiện có; nếu vẫn chưa đủ kỳ thì mới gọi GitHub Backup Seed.
+    - Mọi bản ghi qua Validation Gate is_valid_record().
+    - Smart Cache tích lũy tối đa 2.000 kỳ thật, ghi nguyên tử bằng Atomic Write.
+    - GitHub Backup chỉ gọi khi FetchData trực tiếp lỗi hoặc thiếu số kỳ cần thiết.
     """
     game_cfg = GAMES.get(game_key)
     if not game_cfg:
@@ -410,7 +473,7 @@ def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) 
     meta_file = os.path.join(CACHE_DIR, f"meta_{game_key}.json")
     expected_latest_date = get_latest_expected_draw_date(game_key)
 
-    existing_cache = []
+    existing_cache: List[Dict[str, Any]] = []
     cache_age = 0.0
     cache_is_fresh = False
 
@@ -418,7 +481,13 @@ def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) 
         cache_age = time.time() - os.path.getmtime(cache_file)
         try:
             with open(cache_file, "r", encoding="utf-8") as f:
-                existing_cache = json.load(f)
+                raw_cache = json.load(f)
+            if isinstance(raw_cache, list):
+                existing_cache = [
+                    _normalize_record(r, game_cfg)
+                    for r in raw_cache
+                    if is_valid_record(r, game_cfg)
+                ][:MAX_CACHE_RECORDS]
             if not force_refresh and os.path.exists(meta_file):
                 with open(meta_file, "r", encoding="utf-8") as f:
                     meta = json.load(f)
@@ -426,45 +495,60 @@ def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) 
                     if len(existing_cache) >= sample_k and cached_date >= expected_latest_date:
                         cache_is_fresh = True
         except Exception:
-            pass
+            existing_cache = []
 
     if cache_is_fresh:
         return existing_cache[:sample_k], f"📁 Smart Cache Mới nhất ({len(existing_cache)} kỳ thật)", cache_age
 
     # Bước 1 (Chủ động): Luôn chạy FetchData trực tiếp từ nguồn web để lấy kết quả gần nhất
-    live_fetched = []
+    live_fetched: List[Dict[str, Any]] = []
     active_source_url = ""
     urls = [game_cfg.get("url")] + game_cfg.get("backups", [])
     for url in dict.fromkeys(u for u in urls if u):
         html = fetch_html(url)
-        parsed = parse_history_from_html(html, game_cfg, source_url=url)
+        parsed = [
+            _normalize_record(r, game_cfg)
+            for r in parse_history_from_html(html, game_cfg, source_url=url)
+            if is_valid_record(r, game_cfg)
+        ]
         if len(parsed) >= 1:
             live_fetched = parsed
             active_source_url = url.split("/")[2]
             break
 
     # Bước 2 (Backup): Chỉ lấy GitHub Seed khi FetchData trực tiếp gặp lỗi/thiếu dữ liệu và cache chưa đủ kỳ
-    github_seed = []
+    github_seed: List[Dict[str, Any]] = []
     current_pool_len = len(live_fetched) + len(existing_cache)
     if (not live_fetched or current_pool_len < sample_k) and game_cfg.get("github_jsonl"):
-        github_seed = fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg)
+        github_seed = [
+            _normalize_record(r, game_cfg)
+            for r in fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg)
+            if is_valid_record(r, game_cfg)
+        ]
 
-    # Bước 3: Hợp nhất ưu tiên Live FetchData -> Existing Cache -> GitHub Backup Seed
-    combined = _merge_unique_history(live_fetched, _merge_unique_history(existing_cache, github_seed))
+    # Bước 3: Hợp nhất ưu tiên Live FetchData -> Existing Cache -> GitHub Backup Seed (trần 2.000 kỳ)
+    combined = _merge_unique_history(
+        live_fetched,
+        _merge_unique_history(existing_cache, github_seed, game_cfg, MAX_CACHE_RECORDS),
+        game_cfg,
+        MAX_CACHE_RECORDS,
+    )
 
     if combined:
-        try:
-            with open(cache_file, "w", encoding="utf-8") as f:
-                json.dump(combined, f, ensure_ascii=False)
-            if live_fetched:
-                with open(meta_file, "w", encoding="utf-8") as f:
-                    json.dump({"latest_date": expected_latest_date.strftime("%Y-%m-%d")}, f)
-                cache_age = 0.0
-        except Exception:
-            pass
+        _atomic_write_json(cache_file, combined)
+        if live_fetched:
+            _atomic_write_json(
+                meta_file,
+                {
+                    "latest_date": expected_latest_date.strftime("%Y-%m-%d"),
+                    "record_count": len(combined),
+                    "updated_at": now_vn().strftime("%Y-%m-%d %H:%M:%S"),
+                },
+            )
+            cache_age = 0.0
 
         if live_fetched:
-            status = f"🟢 FetchData Trực tuyến ({active_source_url}) — Cập nhật kỳ gần nhất (Tích lũy {len(combined)} kỳ thật)"
+            status = f"🟢 FetchData Trực tuyến ({active_source_url}) — Cập nhật kỳ gần nhất (Tích lũy {len(combined)}/{MAX_CACHE_RECORDS} kỳ thật)"
         elif existing_cache and github_seed:
             status = f"🛡️ FetchData lỗi -> Smart Cache + GitHub Backup ({len(combined)} kỳ thật)"
         elif github_seed:
