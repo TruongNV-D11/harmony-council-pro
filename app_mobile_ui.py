@@ -1,10 +1,11 @@
 import streamlit as st
 import random
 import os
+import re
 import json
 import time
 import requests
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone
 from typing import Dict, List, Tuple, Any
 
 # =====================================================================
@@ -142,7 +143,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-# 🌐 2. CẤU HÌNH THỜI GIAN & CHUẨN GAME (REAL-TIME ENGINE)
+# 🌐 2. KHO DỮ LIỆU THẬT 3 TẦNG: GITHUB SEED + LIVE WEB + SMART CACHE
 # =====================================================================
 VN_TZ = timezone(timedelta(hours=7))
 def now_vn():
@@ -152,28 +153,79 @@ BASE_DIR = os.path.expanduser("~/.vietlott_predictor")
 CACHE_DIR = os.path.join(BASE_DIR, "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Referer": "https://www.google.com/",
+}
+
 GAMES = {
     "5x35": {
-        "id": "5x35", "label": "Lotto 5/35 (2 phiên/ngày: 13h & 21h)", 
-        "pick": 5, "max_main": 35, 
+        "id": "5x35",
+        "label": "Lotto 5/35 (2 phiên/ngày: 13h & 21h)",
+        "pick": 5, "max_main": 35,
         "has_special": True, "special_max": 12,
-        "draw_type": "daily_twice"
+        "draw_type": "daily_twice",
+        "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
+        "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
+        "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power535.jsonl",
+        "backups": [
+            "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
+            "https://xoso.me/ket-qua/5-35.html",
+            "https://ketqua.net/xo-so-vietlott-5-35",
+            "https://www.kqxs.vn/xo-so-vietlott-5-35",
+        ],
     },
     "6x45": {
-        "id": "6x45", "label": "Mega 6/45 (Thứ 4, 6, CN - 18h)", 
-        "pick": 6, "max_main": 45, 
+        "id": "6x45",
+        "label": "Mega 6/45 (Thứ 4, 6, CN - 18h)",
+        "pick": 6, "max_main": 45,
         "has_special": False,
         "draw_days": [2, 4, 6],
-        "draw_type": "weekly"
+        "draw_type": "weekly",
+        "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/mega-645.html",
+        "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
+        "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power645.jsonl",
+        "backups": [
+            "https://www.minhngoc.net/ket-qua-xo-so/vietlott/mega-645.html",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
+            "https://xoso.me/ket-qua/mega-6-45.html",
+            "https://ketqua.net/xo-so-vietlott-mega-6-45",
+        ],
     },
     "6x55": {
-        "id": "6x55", "label": "Power 6/55 (Thứ 3, 5, 7 - 18h)", 
-        "pick": 6, "max_main": 55, 
+        "id": "6x55",
+        "label": "Power 6/55 (Thứ 3, 5, 7 - 18h)",
+        "pick": 6, "max_main": 55,
         "has_special": False,
         "draw_days": [1, 3, 5],
-        "draw_type": "weekly"
+        "draw_type": "weekly",
+        "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/power-655.html",
+        "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
+        "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power655.jsonl",
+        "backups": [
+            "https://www.minhngoc.net/ket-qua-xo-so/vietlott/power-655.html",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
+            "https://xoso.me/ket-qua/power-6-55.html",
+            "https://ketqua.net/xo-so-vietlott-power-6-55",
+        ],
     },
 }
+
+def get_latest_expected_draw_date(game_key: str) -> date:
+    game_cfg = GAMES.get(game_key, GAMES["6x45"])
+    now = now_vn()
+    current_date = now.date()
+    if game_cfg.get("draw_type") == "daily_twice":
+        return current_date if now.hour >= 13 else current_date - timedelta(days=1)
+    valid_days = game_cfg["draw_days"]
+    for i in range(7):
+        check_date = current_date - timedelta(days=i)
+        if check_date.weekday() in valid_days:
+            return check_date
+    return current_date
 
 def get_next_draw_datetime(game_key: str) -> datetime:
     game_cfg = GAMES.get(game_key, GAMES["6x45"])
@@ -181,57 +233,248 @@ def get_next_draw_datetime(game_key: str) -> datetime:
     if game_cfg.get("draw_type") == "daily_twice":
         today_13h = now.replace(hour=13, minute=0, second=0, microsecond=0)
         today_21h = now.replace(hour=21, minute=0, second=0, microsecond=0)
-        if now < today_13h: return today_13h
-        elif now < today_21h: return today_21h
-        else: return (now + timedelta(days=1)).replace(hour=13, minute=0, second=0, microsecond=0)
-    else:
-        valid_days = game_cfg["draw_days"]
-        current_date = now.date()
-        for i in range(8):
-            check_date = current_date + timedelta(days=i)
-            if check_date.weekday() in valid_days:
-                return datetime.combine(check_date, datetime.min.time()).replace(hour=18, minute=0, tzinfo=VN_TZ)
-        return now
+        if now < today_13h:
+            return today_13h
+        elif now < today_21h:
+            return today_21h
+        return (now + timedelta(days=1)).replace(hour=13, minute=0, second=0, microsecond=0)
+    valid_days = game_cfg["draw_days"]
+    current_date = now.date()
+    for i in range(8):
+        check_date = current_date + timedelta(days=i)
+        if check_date.weekday() in valid_days:
+            return datetime.combine(check_date, datetime.min.time()).replace(hour=18, minute=0, tzinfo=VN_TZ)
+    return now
 
-def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str, float]:
-    game_cfg = GAMES.get(game_key)
-    if not game_cfg:
-        return [], "Game không tồn tại", 0.0
-    
-    cache_file = os.path.join(CACHE_DIR, f"history_{game_key}.json")
-    cache_age = 0.0
-    if not force_refresh and os.path.exists(cache_file):
-        file_mtime = os.path.getmtime(cache_file)
-        cache_age = time.time() - file_mtime
-        try:
-            with open(cache_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if len(data) >= sample_k:
-                    return data[:sample_k], f"📁 Smart Cache (Đã lưu {len(data)} kỳ)", cache_age
-        except:
-            pass
+def fetch_github_seed_data(github_url: str, game_cfg: dict) -> List[Dict[str, Any]]:
+    """Tải dữ liệu nền dài kỳ từ kho vietvudanh/vietlott-data (định dạng JSONL)."""
+    if not github_url:
+        return []
+    records = []
+    try:
+        resp = requests.get(github_url, headers=DEFAULT_HEADERS, timeout=12)
+        if resp.status_code != 200:
+            return []
+        pick_n = game_cfg["pick"]
+        max_m = game_cfg["max_main"]
+        for line in resp.text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            obj = json.loads(line)
+            raw_nums = obj.get("result") or obj.get("numbers") or []
+            valid = [int(x) for x in raw_nums if 1 <= int(x) <= max_m]
+            if len(valid) >= pick_n:
+                mains = sorted(valid[:pick_n])
+                entry = {
+                    "draw": obj.get("id") or obj.get("draw_id") or 0,
+                    "date": obj.get("date", ""),
+                    "mains": mains,
+                }
+                if game_cfg.get("has_special") and len(valid) > pick_n:
+                    entry["special"] = valid[pick_n]
+                records.append(entry)
+        records.sort(key=lambda x: str(x.get("date", "")), reverse=True)
+    except Exception:
+        pass
+    return records
 
-    history = []
-    rnd = random.Random(108)
-    max_m = game_cfg["max_main"]
+def fetch_html(url: str, timeout: int = 8) -> str:
+    """Lấy HTML trực tiếp tương tự cơ chế của v1.7.1-Final."""
+    try:
+        resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=timeout)
+        if resp.status_code == 200 and resp.text:
+            return resp.text
+    except Exception:
+        pass
+    return ""
+
+def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
+    """
+    Parser chuyên biệt cho nguồn vietlott.vn: bóc các dòng/khối kết quả và ngày kỳ quay
+    (nếu có) rồi chuẩn hóa về bản ghi thống nhất {"draw", "date", "mains", "special"?}.
+    """
+    records: List[Dict[str, Any]] = []
+    if not html:
+        return records
+
     pick_n = game_cfg["pick"]
+    max_m = game_cfg["max_main"]
     has_spec = game_cfg.get("has_special", False)
     spec_max = game_cfg.get("special_max", 12)
 
-    for i in range(max(sample_k, 120)):
-        mains = sorted(rnd.sample(range(1, max_m + 1), pick_n))
-        entry = {"draw": 2000 - i, "mains": mains}
-        if has_spec:
-            entry["special"] = rnd.randint(1, spec_max)
-        history.append(entry)
-    
-    try:
-        with open(cache_file, "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False)
-    except:
-        pass
+    clean_text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    dates_found = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", clean_text)
 
-    return history[:sample_k], "⚡ Real-time Live Engine Active", 0.0
+    # Tìm các cụm thẻ bóng/số liền kề trong bảng kết quả của vietlott.vn
+    ball_blocks = re.findall(
+        r"(?:<(?:span|li|td|div|b|strong)[^>]*>\s*\d{1,2}\s*</(?:span|li|td|div|b|strong)>\s*){" + str(pick_n) + r",8}",
+        clean_text,
+        flags=re.IGNORECASE
+    )
+
+    draw_id = 9999
+    for idx, grp in enumerate(ball_blocks):
+        raw_nums = [int(x) for x in re.findall(r">\s*(\d{1,2})\s*<", grp)]
+        mains_raw = []
+        for n in raw_nums:
+            if 1 <= n <= max_m and n not in mains_raw:
+                mains_raw.append(n)
+                if len(mains_raw) == pick_n:
+                    break
+        if len(mains_raw) == pick_n:
+            entry: Dict[str, Any] = {
+                "draw": draw_id,
+                "date": dates_found[idx] if idx < len(dates_found) else "",
+                "mains": sorted(mains_raw),
+            }
+            if has_spec:
+                for n in raw_nums[pick_n:]:
+                    if 1 <= n <= spec_max:
+                        entry["special"] = n
+                        break
+            records.append(entry)
+            draw_id -= 1
+
+    if records:
+        return records
+
+    # Dự phòng nếu vietlott.vn trả về văn bản/JSON nhúng
+    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", re.sub(r"<[^>]+>", " ", clean_text))]
+    valid_nums = [n for n in all_nums if 1 <= n <= max_m]
+    for i in range(0, len(valid_nums), pick_n):
+        seg = valid_nums[i : i + pick_n]
+        if len(seg) == pick_n:
+            records.append({
+                "draw": draw_id,
+                "date": dates_found[len(records)] if len(records) < len(dates_found) else "",
+                "mains": sorted(seg),
+            })
+            draw_id -= 1
+
+    return records
+
+def parse_history_from_html(html: str, game_cfg: dict, source_url: str = "") -> List[Dict[str, Any]]:
+    """
+    Điều phối parser theo nguồn web trực tiếp (hỗ trợ riêng vietlott.vn và chuẩn v1.7.1-Final).
+    """
+    if not html:
+        return []
+
+    if "vietlott.vn" in (source_url or "").lower():
+        vn_parsed = parse_vietlott_vn_html(html, game_cfg)
+        if vn_parsed:
+            return vn_parsed
+
+    history: List[Dict[str, Any]] = []
+    pick_n = game_cfg["pick"]
+    max_m = game_cfg["max_main"]
+
+    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", html)]
+    valid_nums = [n for n in all_nums if 1 <= n <= max_m]
+
+    draw_id = 9999
+    for i in range(0, len(valid_nums), pick_n):
+        seg = valid_nums[i : i + pick_n]
+        if len(seg) == pick_n:
+            history.append({
+                "draw": draw_id,
+                "mains": sorted(seg),
+            })
+            draw_id -= 1
+
+    return history
+
+def _merge_unique_history(primary: List[Dict[str, Any]], secondary: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Gộp dữ liệu và khử trùng lặp dựa trên bộ số chính + số đặc biệt."""
+    merged = []
+    seen = set()
+    for item in primary + secondary:
+        key = (tuple(item["mains"]), item.get("special"))
+        if key not in seen:
+            seen.add(key)
+            merged.append(item)
+    return merged
+
+def get_history(game_key: str, sample_k: int = 80, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str, float]:
+    """
+    Ưu tiên tuyệt đối FetchData trực tiếp (Live Web) để lấy kết quả gần nhất.
+    - Nếu FetchData trực tiếp thành công: đưa dữ liệu mới nhất lên đầu, gộp với Smart Cache (và GitHub Seed nếu cần đủ tầm nhìn).
+    - Nếu FetchData trực tiếp lỗi/không bắt được dữ liệu: dùng Smart Cache hiện có; nếu vẫn chưa đủ kỳ thì mới gọi GitHub Backup Seed.
+    """
+    game_cfg = GAMES.get(game_key)
+    if not game_cfg:
+        return [], "Game không tồn tại", 0.0
+
+    cache_file = os.path.join(CACHE_DIR, f"history_{game_key}.json")
+    meta_file = os.path.join(CACHE_DIR, f"meta_{game_key}.json")
+    expected_latest_date = get_latest_expected_draw_date(game_key)
+
+    existing_cache = []
+    cache_age = 0.0
+    cache_is_fresh = False
+
+    if os.path.exists(cache_file):
+        cache_age = time.time() - os.path.getmtime(cache_file)
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                existing_cache = json.load(f)
+            if not force_refresh and os.path.exists(meta_file):
+                with open(meta_file, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+                    cached_date = datetime.strptime(meta.get("latest_date", "2000-01-01"), "%Y-%m-%d").date()
+                    if len(existing_cache) >= sample_k and cached_date >= expected_latest_date:
+                        cache_is_fresh = True
+        except Exception:
+            pass
+
+    if cache_is_fresh:
+        return existing_cache[:sample_k], f"📁 Smart Cache Mới nhất ({len(existing_cache)} kỳ thật)", cache_age
+
+    # Bước 1 (Chủ động): Luôn chạy FetchData trực tiếp từ nguồn web để lấy kết quả gần nhất
+    live_fetched = []
+    active_source_url = ""
+    urls = [game_cfg.get("url")] + game_cfg.get("backups", [])
+    for url in dict.fromkeys(u for u in urls if u):
+        html = fetch_html(url)
+        parsed = parse_history_from_html(html, game_cfg, source_url=url)
+        if len(parsed) >= 1:
+            live_fetched = parsed
+            active_source_url = url.split("/")[2]
+            break
+
+    # Bước 2 (Backup): Chỉ lấy GitHub Seed khi FetchData trực tiếp gặp lỗi/thiếu dữ liệu và cache chưa đủ kỳ
+    github_seed = []
+    current_pool_len = len(live_fetched) + len(existing_cache)
+    if (not live_fetched or current_pool_len < sample_k) and game_cfg.get("github_jsonl"):
+        github_seed = fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg)
+
+    # Bước 3: Hợp nhất ưu tiên Live FetchData -> Existing Cache -> GitHub Backup Seed
+    combined = _merge_unique_history(live_fetched, _merge_unique_history(existing_cache, github_seed))
+
+    if combined:
+        try:
+            with open(cache_file, "w", encoding="utf-8") as f:
+                json.dump(combined, f, ensure_ascii=False)
+            if live_fetched:
+                with open(meta_file, "w", encoding="utf-8") as f:
+                    json.dump({"latest_date": expected_latest_date.strftime("%Y-%m-%d")}, f)
+                cache_age = 0.0
+        except Exception:
+            pass
+
+        if live_fetched:
+            status = f"🟢 FetchData Trực tuyến ({active_source_url}) — Cập nhật kỳ gần nhất (Tích lũy {len(combined)} kỳ thật)"
+        elif existing_cache and github_seed:
+            status = f"🛡️ FetchData lỗi -> Smart Cache + GitHub Backup ({len(combined)} kỳ thật)"
+        elif github_seed:
+            status = f"🛡️ FetchData lỗi -> GitHub Backup Data ({len(combined)} kỳ lịch sử thật)"
+        else:
+            status = f"🛡️ FetchData lỗi -> Smart Cache Dự phòng ({len(combined)} kỳ thật)"
+
+        return combined[:sample_k], status, cache_age
+
+    return [], "⚠️ FetchData trực tiếp thất bại và không có dữ liệu Cache/Backup khả dụng", 0.0
 
 
 # =====================================================================
@@ -543,9 +786,9 @@ st.markdown("""
     <b>📜 TRÍCH YẾU HỌC THUẬT & HỆ THỐNG TÍCH HỢP:</b><br>
     • <b>Hội đồng Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp, Bản mệnh Nạp Âm & Cung Phi Lạc Thư (Tôn trọng đa dạng giới tính với cơ chế trung hòa trọng số động).<br>
     • <b>Hội đồng Phương Tây:</b> Chiêm tinh cổ điển 3 Tầng — Tứ đại Nguyên tố (Triplicities), Phẩm tính Vận động (Modalities: Cardinal/Fixed/Mutable) & Hành tinh Đắc vị.<br>
-    • <b>Hội đồng Thống kê Ma trận:</b> Phân tích tần suất lịch sử đa chiều với chiến lược động (Hot / Neutral / Cold) dựa trên tầm nhìn mẫu linh hoạt.<br>
+    • <b>Hội đồng Thống kê Ma trận:</b> Phân tích tần suất lịch sử đa chiều ưu tiên FetchData trực tiếp lấy kỳ gần nhất, Smart Cache tích lũy và GitHub Backup khi lỗi với chiến lược động (Hot / Neutral / Cold).<br>
     • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia tư vấn hành vi độc lập theo thời điểm động tâm thực tế (Real-time VN_TZ) — phân định Vùng Cát / Bình / Bĩ gắn liền trạng thái quẻ Thể-Dụng làm lớp phanh an toàn quản trị vốn.<br>
-    • <b>Trợ lý AI Gemini Engine:</b> Tự động quét REST API model khả dụng để giải mã mã nguồn, luận giải thuật toán và cố vấn kỷ luật tài chính dưới lăng kính xã hội học.
+    • <b>Trợ lý AI Gemini Engine:</b> Giao thức REST API chuẩn hóa giải mã mã nguồn, luận giải thuật toán và cố vấn kỷ luật tài chính dưới lăng kính xã hội học.
 </div>
 """, unsafe_allow_html=True)
 
@@ -638,6 +881,7 @@ with st.expander("👤 Thiết lập Kỳ quay Real-time, Bản mệnh & Chiến
     st.markdown("---")
     st.markdown("📊 **Cấu hình Tầm nhìn Lịch sử & Khẩu vị Thống kê:**")
     horizon_samples = st.slider("🔍 Tầm nhìn mẫu (Số kỳ quay lịch sử xét duyệt)", min_value=20, max_value=500, value=100, step=10)
+    force_refresh_data = st.checkbox("🔄 Buộc FetchData lại kết quả mới nhất từ nguồn trực tiếp", value=False)
     
     hc_strategy = st.radio(
         "🎯 Khẩu vị Chiến lược Thống kê",
@@ -675,35 +919,41 @@ if run_clicked:
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    status_text.text("🔄 Đang thiết lập kết nối Real-time & Nạp Smart Cache lịch sử...")
+    status_text.text("🔄 Đang chạy FetchData trực tiếp lấy kết quả gần nhất (kích hoạt Backup nếu lỗi)...")
     progress_bar.progress(25)
-    time.sleep(0.6)
+    history_data, data_source_status, cache_age_sec = get_history(
+        game_key, sample_k=horizon_samples, force_refresh=force_refresh_data
+    )
 
     status_text.text("🏛️ Thẩm định Đông phương & Ma trận Chiêm tinh Phương Tây 3 Tầng...")
     progress_bar.progress(60)
-    time.sleep(0.6)
+    time.sleep(0.3)
 
-    status_text.text("📊 Thuật Toán Thống Kê đang chạy khẩu vị Hot/Cold...")
+    status_text.text("📊 Thuật Toán Thống Kê đang chạy khẩu vị Hot/Cold trên dữ liệu thực tế...")
     progress_bar.progress(90)
-    time.sleep(0.6)
+    time.sleep(0.3)
 
     status_text.text("✅ Hoàn tất thẩm định đa chiều!")
     progress_bar.progress(100)
-    time.sleep(0.4)
+    time.sleep(0.2)
     
     progress_bar.empty()
     status_text.empty()
 
     st.markdown(f"### 🎯 KẾT QUẢ THẨM ĐỊNH THỰC CHIẾN ({num_rows} BỘ SỐ - {game_cfg['label']})")
 
-    history_data, data_source_status, cache_age_sec = get_history(game_key, sample_k=horizon_samples, force_refresh=False)
-
     age_min = round(cache_age_sec / 60, 1)
-    st.success(
-        f"🌐 **Trạng thái Data:** {data_source_status} | "
-        f"⏱️ **Tuổi Cache (Cache Age):** {age_min} phút ({int(cache_age_sec)} giây) | "
-        f"🕒 **Kỳ quay:** {profile['draw_datetime']}"
-    )
+    if history_data:
+        st.success(
+            f"🌐 **Trạng thái Data:** {data_source_status} | "
+            f"📊 **Số kỳ nạp thành công:** {len(history_data)} kỳ | "
+            f"⏱️ **Tuổi Cache:** {age_min} phút | "
+            f"🕒 **Kỳ quay:** {profile['draw_datetime']}"
+        )
+    else:
+        st.error(
+            f"🌐 **Trạng thái Data:** {data_source_status} — Không có dữ liệu thật để thống kê, hệ thống chỉ chấm điểm theo Huyền học Đông/Tây."
+        )
 
     max_main = game_cfg["max_main"]
     pick_count = game_cfg["pick"]
@@ -719,7 +969,7 @@ if run_clicked:
     active_councils = []
     if use_east: active_councils.append("eastern")
     if use_west: active_councils.append("western")
-    if use_stat: active_councils.append("statistics")
+    if use_stat and history_data: active_councils.append("statistics")
 
     weights = {}
     if active_councils:
@@ -778,7 +1028,7 @@ if run_clicked:
             "stat_score": round(base_score - rnd.uniform(0.5, 1.8), 1),
             "detail_east": detail_east_text,
             "detail_west": f"Ma trận Chiêm Tinh 3 Tầng: Cung {profile['western_sign']} (Nguyên tố {profile['element_west']} | Phẩm tính {profile['modality']} | Chiếu mệnh {profile['ruling_planet']}).",
-            "detail_stat": f"Tầm nhìn {horizon_samples} kỳ: Khớp chiến lược {hc_strategy.split(' ')[1]}."
+            "detail_stat": f"Tầm nhìn {len(history_data)} kỳ thật: Khớp chiến lược {hc_strategy.split(' ')[1]}."
         })
 
     for idx, res in enumerate(results, 1):
@@ -786,7 +1036,7 @@ if run_clicked:
         
         animated_balls_html = ""
         for num in res['set']:
-            time.sleep(0.35) 
+            time.sleep(0.2) 
             animated_balls_html += f'<div class="ball-number">{num:02d}</div>'
             
             card_placeholder.markdown(f"""
@@ -806,7 +1056,7 @@ if run_clicked:
             """, unsafe_allow_html=True)
 
         if res["special"] is not None:
-            time.sleep(0.35)
+            time.sleep(0.2)
             animated_balls_html += f'<div class="ball-special" title="Bóng đặc biệt (1-12)">⚡{res["special"]:02d}</div>'
             card_placeholder.markdown(f"""
             <div class="council-card">
@@ -824,7 +1074,7 @@ if run_clicked:
             </div>
             """, unsafe_allow_html=True)
 
-        time.sleep(0.5)
+        time.sleep(0.3)
 
     st.session_state['latest_result'] = {
         'numbers': results[0]['set'] if results else [],
@@ -883,13 +1133,13 @@ with st.expander("🌸 Mai Hoa Dịch Số — Trạm Chiêm Nghiệm Thời V�
 st.divider()
 
 # =====================================================================
-# 💬 9. HỘP CHỨC NĂNG AI: GEMINI ENGINE (DYNAMIC REST API AUTO-DISCOVERY)
+# 💬 9. HỘP CHỨC NĂNG AI: GEMINI ENGINE (REST API V1BETA CHUẨN HÓA)
 # =====================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện & Giải mã Toàn bộ Code & Thuật toán", expanded=False):
     st.markdown("""
     <p style="color: #A0A5B5; font-size: 13px; margin-bottom: 15px;">
-    Trợ lý AI tự động quét danh sách model hợp lệ từ tài khoản API của bạn để gọi REST Protocol chuẩn. Bạn có thể hỏi bất cứ điều gì về mã nguồn.
+    Trợ lý AI kết nối trực tiếp qua REST API chuẩn hóa (tự động fallback model) để giải mã mã nguồn, thuật toán và kỷ luật quản trị vốn.
     </p>
     """, unsafe_allow_html=True)
 
@@ -906,56 +1156,61 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
             st.markdown(user_query)
 
         with st.chat_message("assistant"):
-            with st.spinner("Đang tự động xác định model khả dụng và phân tích..."):
+            with st.spinner("Đang kết nối Gemini Engine và phân tích..."):
                 try:
                     api_key = st.secrets.get("GEMINI_API_KEY", "")
                     if not api_key:
                         st.error("⚠️ Chưa cấu hình GEMINI_API_KEY trong Streamlit Secrets!")
                     else:
-                        gemini_system_prompt = """
-                        BẠN LÀ TRỢ LÝ AI KỸ THUẬT & XÃ HỘI HỌC CỦA ỨNG DỤNG 'Vietlott Harmony Edition v2.6'. 
-                        BẠN ĐÃ ĐƯỢC NẠP TOÀN BỘ MÃ NGUỒN VÀ HIỂU RÕ CÁC HÀM:
-                        - `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (tôn trọng đa dạng giới tính: tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định).
-                        - `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố Hỏa/Thổ/Khí/Thủy, Phẩm tính Vận động, Hành tinh Đắc vị).
-                        - `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold theo tầm nhìn mẫu.
-                        - `MaiHoaDichSoCore`: Trạm chiêm nghiệm Mai Hoa Dịch Số đánh giá thời vận (Cát/Bình/Bĩ) và kỷ luật quản trị vốn real-time gắn liền với trạng thái quẻ.
-                        
-                        QUY TẮC BẮT BUỘC:
-                        1. Trả lời thẳng vào câu hỏi của người dùng bằng cách trích dẫn trực tiếp logic hoặc tên hàm có thật trong mã nguồn ở trên.
-                        2. Dùng ngôn ngữ đời sống, tâm lý hành vi để giải thích (Sociological Translation).
-                        3. PHẢI LUÔN SÒNG PHẢNG NHẮC NHỞ: Xổ số là ngẫu nhiên tuyệt đối, ứng dụng không phải công cụ bẻ khóa hay dự đoán trúng thưởng mà là bộ lọc kỷ luật giúp người dùng lựa chọn có lý do và quản trị cảm xúc.
-                        """
-                        
-                        models_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-                        models_resp = requests.get(models_url, timeout=10)
-                        
-                        target_model_name = "gemini-1.5-flash"
-                        if models_resp.status_code == 200:
-                            models_data = models_resp.json().get("models", [])
-                            for m in models_data:
-                                name = m.get("name", "")
-                                methods = m.get("supportedGenerationMethods", [])
-                                if "generateContent" in methods and "pro" not in name.lower():
-                                    target_model_name = name.replace("models/", "")
-                                    break
-                        
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model_name}:generateContent?key={api_key}"
-                        
+                        gemini_system_prompt = (
+                            "BẠN LÀ TRỢ LÝ AI KỸ THUẬT & XÃ HỘI HỌC CỦA ỨNG DỤNG 'Vietlott Harmony Edition v2.6'. "
+                            "BẠN ĐÃ ĐƯỢC NẠP TOÀN BỘ MÃ NGUỒN VÀ HIỂU RÕ CÁC HÀM: "
+                            "- `get_history` / `fetch_github_seed_data` / `parse_history_from_html`: Luôn ưu tiên FetchData trực tiếp lấy kỳ gần nhất, kết hợp Smart Cache và dùng GitHub Seed làm nguồn backup khi FetchData gặp lỗi. "
+                            "- `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định). "
+                            "- `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố, Phẩm tính Vận động, Hành tinh Đắc vị). "
+                            "- `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold trên tập dữ liệu lịch sử thật. "
+                            "- `MaiHoaDichSoCore`: Trạm chiêm nghiệm Mai Hoa Dịch Số đánh giá thời vận (Cát/Bình/Bĩ) và kỷ luật quản trị vốn real-time. "
+                            "QUY TẮC BẮT BUỘC: Trả lời thẳng vào bản chất kỹ thuật, trích dẫn trực tiếp tên hàm/logic thật trong mã nguồn, dùng ngôn ngữ tâm lý hành vi để giải thích, "
+                            "và luôn nhắc nhở sòng phẳng rằng xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật quản trị cảm xúc chứ không phải công cụ bẻ khóa."
+                        )
+
+                        candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+                        ai_reply = None
+                        last_error = ""
+
                         payload = {
-                            "contents": [{"parts": [{"text": f"System Instruction:\n{gemini_system_prompt}\n\nUser Question:\n{user_query}"}]}]
+                            "system_instruction": {
+                                "parts": [{"text": gemini_system_prompt}]
+                            },
+                            "contents": [
+                                {
+                                    "role": "user",
+                                    "parts": [{"text": user_query}]
+                                }
+                            ]
                         }
-                        
-                        headers = {'Content-Type': 'application/json'}
-                        response = requests.post(url, headers=headers, json=payload, timeout=20)
-                        
-                        if response.status_code == 200:
-                            res_json = response.json()
-                            ai_reply = res_json['candidates'][0]['content']['parts'][0]['text']
+                        headers = {"Content-Type": "application/json"}
+
+                        for model_name in candidate_models:
+                            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+                            response = requests.post(url, headers=headers, json=payload, timeout=25)
+                            if response.status_code == 200:
+                                res_json = response.json()
+                                candidates = res_json.get("candidates", [])
+                                if candidates and candidates[0].get("content", {}).get("parts"):
+                                    ai_reply = candidates[0]["content"]["parts"][0]["text"]
+                                    break
+                                else:
+                                    last_error = f"Model {model_name} trả về phản hồi rỗng hoặc bị chặn bởi bộ lọc an toàn."
+                            else:
+                                last_error = f"Model {model_name} lỗi HTTP {response.status_code}: {response.text}"
+
+                        if ai_reply:
                             st.markdown(ai_reply, unsafe_allow_html=True)
                             st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
                         else:
-                            st.error(f"Lỗi kết nối Gemini API với model '{target_model_name}' (Mã lỗi {response.status_code}): {response.text}")
-                        
+                            st.error(f"Không thể nhận phản hồi từ Gemini API. Chi tiết: {last_error}")
+
                 except Exception as e:
                     st.error(f"Lỗi hệ thống kết nối AI: {e}")
 
