@@ -274,10 +274,11 @@ def fetch_github_seed_data(github_url: str, game_cfg: dict) -> List[Dict[str, An
         pass
     return records
 
-def fetch_html(url: str) -> str:
+def fetch_html(url: str, timeout: int = 8) -> str:
+    """Lấy HTML trực tiếp tương tự cơ chế của v1.7.1-Final."""
     try:
-        resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
-        if resp.status_code == 200 and len(resp.text) > 300:
+        resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=timeout)
+        if resp.status_code == 200 and resp.text:
             return resp.text
     except Exception:
         pass
@@ -285,80 +286,28 @@ def fetch_html(url: str) -> str:
 
 def parse_history_from_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     """
-    Khôi phục luồng parse kiểu v1.7.1: lọc các dòng/khối chứa từ khóa kết quả
-    ('kq-ketqua', 'result', 'vnn', 'chuoi'), trích xuất số \b\d{1,2}\b trong phạm vi hợp lệ,
-    và dự phòng quét khối thẻ số nếu DOM dùng tên class khác.
+    Trích xuất lịch sử kỳ quay theo logic v1.7.1-Final:
+    tìm toàn bộ số \b\d{1,2}\b trong [1, max_main] và gom từng nhóm `pick` số chính.
     """
-    history = []
+    history: List[Dict[str, Any]] = []
     if not html:
         return history
 
     pick_n = game_cfg["pick"]
     max_m = game_cfg["max_main"]
-    has_spec = game_cfg.get("has_special", False)
-    spec_max = game_cfg.get("special_max", 12)
-    req_len = pick_n + (1 if has_spec else 0)
 
-    seen_sets = set()
+    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", html)]
+    valid_nums = [n for n in all_nums if 1 <= n <= max_m]
+
     draw_id = 9999
-
-    # Nhánh 1 (Chuẩn v1.7.1): Lọc từng dòng chứa từ khóa kết quả
-    keywords = ("kq-ketqua", "result", "vnn", "chuoi")
-    for raw_line in html.splitlines():
-        low = raw_line.lower()
-        if any(k in low for k in keywords):
-            text_line = re.sub(r"<[^>]+>", " ", raw_line)
-            nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", text_line)]
-            valid_mains = []
-            for n in nums:
-                if 1 <= n <= max_m and n not in valid_mains:
-                    valid_mains.append(n)
-                    if len(valid_mains) == pick_n:
-                        break
-            if len(valid_mains) >= pick_n:
-                mains = sorted(valid_mains[:pick_n])
-                spec_val = None
-                if has_spec:
-                    for n in nums[pick_n:]:
-                        if 1 <= n <= spec_max:
-                            spec_val = n
-                            break
-                sig = (tuple(mains), spec_val)
-                if sig not in seen_sets:
-                    seen_sets.add(sig)
-                    entry = {"draw": draw_id, "mains": mains}
-                    if has_spec and spec_val is not None:
-                        entry["special"] = spec_val
-                    history.append(entry)
-                    draw_id -= 1
-
-    if history:
-        return history
-
-    # Nhánh 2 (Fallback nếu trang chia bóng qua nhiều dòng/thẻ): Gom cụm thẻ chứa số
-    clean_html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
-    ball_groups = re.findall(
-        r"(?:<(?:li|span|div|td)[^>]*>\s*\d{1,2}\s*</(?:li|span|div|td)>\s*){" + str(req_len) + r",8}",
-        clean_html,
-        flags=re.IGNORECASE
-    )
-    for grp in ball_groups:
-        nums = [int(x) for x in re.findall(r">\s*(\d{1,2})\s*<", grp)]
-        if len(nums) >= req_len:
-            mains_raw = nums[:pick_n]
-            if len(set(mains_raw)) == pick_n and all(1 <= n <= max_m for n in mains_raw):
-                mains = sorted(mains_raw)
-                spec_val = nums[pick_n] if has_spec else None
-                if has_spec and not (1 <= spec_val <= spec_max):
-                    continue
-                sig = (tuple(mains), spec_val)
-                if sig not in seen_sets:
-                    seen_sets.add(sig)
-                    entry = {"draw": draw_id, "mains": mains}
-                    if has_spec:
-                        entry["special"] = spec_val
-                    history.append(entry)
-                    draw_id -= 1
+    for i in range(0, len(valid_nums), pick_n):
+        seg = valid_nums[i : i + pick_n]
+        if len(seg) == pick_n:
+            history.append({
+                "draw": draw_id,
+                "mains": sorted(seg),
+            })
+            draw_id -= 1
 
     return history
 
