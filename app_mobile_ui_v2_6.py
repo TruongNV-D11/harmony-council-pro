@@ -168,10 +168,11 @@ GAMES = {
         "has_special": True, "special_max": 12,
         "draw_type": "daily_twice",
         "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
-        "github_jsonl": None,
+        "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power535.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
             "https://xoso.me/ket-qua/5-35.html",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
             "https://ketqua.net/xo-so-vietlott-5-35",
             "https://www.kqxs.vn/xo-so-vietlott-5-35",
         ],
