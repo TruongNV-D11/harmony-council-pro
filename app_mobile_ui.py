@@ -3,6 +3,7 @@ import random
 import os
 import re
 import json
+import math
 import time
 import requests
 from datetime import datetime, date, timedelta, timezone
@@ -44,10 +45,22 @@ st.markdown("""
         background-color: #161922;
         border-radius: 14px;
         padding: 18px;
-        margin-bottom: 18px;
+        margin-bottom: 14px;
         border: 1px solid #2E3446;
         border-left: 5px solid #D4AF37;
         box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+    }
+    .iching-conclusion-box {
+        background: rgba(255, 215, 0, 0.06);
+        border: 1px solid rgba(212, 175, 55, 0.4);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin: 10px 0 12px 0;
+    }
+    .iching-meta-grid {
+        font-size: 13px;
+        color: #CFD8DC;
+        line-height: 1.65;
     }
     .ball-number {
         display: inline-block;
@@ -306,7 +319,6 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     clean_text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
     dates_found = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", clean_text)
 
-    # Tìm các cụm thẻ bóng/số liền kề trong bảng kết quả của vietlott.vn
     ball_blocks = re.findall(
         r"(?:<(?:span|li|td|div|b|strong)[^>]*>\s*\d{1,2}\s*</(?:span|li|td|div|b|strong)>\s*){" + str(pick_n) + r",8}",
         clean_text,
@@ -339,7 +351,6 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     if records:
         return records
 
-    # Dự phòng nếu vietlott.vn trả về văn bản/JSON nhúng
     all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", re.sub(r"<[^>]+>", " ", clean_text))]
     valid_nums = [n for n in all_nums if 1 <= n <= max_m]
     for i in range(0, len(valid_nums), pick_n):
@@ -500,7 +511,6 @@ def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False)
     if cache_is_fresh:
         return existing_cache[:sample_k], f"📁 Smart Cache Mới nhất ({len(existing_cache)} kỳ thật)", cache_age
 
-    # Bước 1 (Chủ động): Luôn chạy FetchData trực tiếp từ nguồn web để lấy kết quả gần nhất
     live_fetched: List[Dict[str, Any]] = []
     active_source_url = ""
     urls = [game_cfg.get("url")] + game_cfg.get("backups", [])
@@ -516,7 +526,6 @@ def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False)
             active_source_url = url.split("/")[2]
             break
 
-    # Bước 2 (Backup): Chỉ lấy GitHub Seed khi FetchData trực tiếp gặp lỗi/thiếu dữ liệu và cache chưa đủ kỳ
     github_seed: List[Dict[str, Any]] = []
     current_pool_len = len(live_fetched) + len(existing_cache)
     if (not live_fetched or current_pool_len < sample_k) and game_cfg.get("github_jsonl"):
@@ -526,7 +535,6 @@ def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False)
             if is_valid_record(r, game_cfg)
         ]
 
-    # Bước 3: Hợp nhất ưu tiên Live FetchData -> Existing Cache -> GitHub Backup Seed (trần 2.000 kỳ)
     combined = _merge_unique_history(
         live_fetched,
         _merge_unique_history(existing_cache, github_seed, game_cfg, MAX_CACHE_RECORDS),
@@ -663,7 +671,7 @@ class PhongThuyReferenceCore:
             ((10,24),(11,22),"Bọ Cạp", "Thủy", "Kiên định (Fixed)", "Sao Diêm Vương (Pluto)"),
             ((11,23),(12,21),"Nhân Mã", "Hỏa", "Biến đổi (Mutable)", "Sao Mộc (Jupiter)"),
             ((12,22),(1,20), "Ma Kết", "Thổ", "Tiên phong (Cardinal)", "Sao Thổ (Saturn)"),
-            ((1,21),(2,19), "Bảo Bình", "Khí", "Kiên định (Fixed)", "Sao Thiên Vương & Sao Thổ"),
+            ((1,21),(2,19), "Bảo Bình", "Khí", "Biến đổi (Mutable)", "Sao Thiên Vương & Sao Thổ"),
             ((2,20),(3,20), "Song Ngư", "Thủy", "Biến đổi (Mutable)", "Sao Hải Vương (Neptune)")
         ]
         
@@ -689,8 +697,110 @@ class PhongThuyReferenceCore:
 
 
 # =====================================================================
-# 🌸 3B. LÕI CHUYÊN GIA HÀNH VI: MAI HOA DỊCH SỐ (STANDALONE ADVISORY)
+# 🌸 3B. LÕI CHUYÊN GIA THỜI VẬN TÀI LỘC: MAI HOA DỊCH SỐ
 # =====================================================================
+def _jd_from_date(day: int, month: int, year: int) -> int:
+    a = (14 - month) // 12
+    y = year + 4800 - a
+    m = month + 12 * a - 3
+    return day + (153 * m + 2) // 5 + 365 * y + y // 4 - y // 100 + y // 400 - 32045
+
+
+def _new_moon_jd(k: int, time_zone: float = 7.0) -> int:
+    t = k / 1236.85
+    t2 = t * t
+    t3 = t2 * t
+    dr = math.pi / 180.0
+    jd1 = 2415020.75933 + 29.53058868 * k + 0.0001178 * t2 - 0.000000155 * t3
+    jd1 = jd1 + 0.00033 * math.sin((166.56 + 132.87 * t - 0.009173 * t2) * dr)
+    m_pr = 359.2242 + 29.10535608 * k - 0.0000333 * t2 - 0.00000347 * t3
+    m = 306.0253 + 385.81691806 * k + 0.0107306 * t2 + 0.00001236 * t3
+    f = 21.2964 + 390.67050646 * k - 0.0016528 * t2 - 0.00000239 * t3
+    c1 = (0.1734 - 0.000393 * t) * math.sin(m_pr * dr) + 0.0021 * math.sin(2 * m_pr * dr)
+    c1 = c1 - 0.4068 * math.sin(m * dr) + 0.0161 * math.sin(2 * m * dr) - 0.0004 * math.sin(3 * m * dr)
+    c1 = c1 + 0.0104 * math.sin(2 * f * dr) - 0.0051 * math.sin((m_pr + m) * dr)
+    c1 = c1 - 0.0074 * math.sin((m_pr - m) * dr) + 0.0004 * math.sin((2 * f + m_pr) * dr)
+    c1 = c1 - 0.0004 * math.sin((2 * f - m_pr) * dr) - 0.0006 * math.sin((2 * f + m) * dr)
+    c1 = c1 + 0.0010 * math.sin((2 * f - m) * dr) + 0.0005 * math.sin((m + 2 * m_pr) * dr)
+    if t < -11:
+        delta_t = 0.001 + 0.000839 * t + 0.0002261 * t2 - 0.00000845 * t3 - 0.000081 * t * t3
+    else:
+        delta_t = -0.000278 + 0.000265 * t + 0.000262 * t2
+    jd_new = jd1 + c1 - delta_t
+    return int(math.floor(jd_new + 0.5 + time_zone / 24.0))
+
+
+def _sun_longitude(jdn: int, time_zone: float = 7.0) -> int:
+    t = (jdn - 0.5 - time_zone / 24.0 - 2451545.0) / 36525.0
+    t2 = t * t
+    dr = math.pi / 180.0
+    m = 357.52910 + 35999.05030 * t - 0.0001559 * t2 - 0.00000048 * t2 * t
+    l0 = 280.46645 + 36000.76983 * t + 0.0003032 * t2
+    dl = (1.914600 - 0.004817 * t - 0.000014 * t2) * math.sin(m * dr)
+    dl = dl + (0.019993 - 0.000101 * t) * math.sin(2 * m * dr) + 0.000290 * math.sin(3 * m * dr)
+    theta = (l0 + dl) * dr
+    omega = 125.04 - 1934.136 * t
+    lng = theta - 0.00569 - 0.00478 * math.sin(omega * dr)
+    lng = lng * 180.0 / math.pi
+    lng = lng - 360.0 * math.floor(lng / 360.0)
+    return int(math.floor(lng / 30.0))
+
+
+def _lunar_month_11_jd(yy: int, time_zone: float = 7.0) -> int:
+    off = _jd_from_date(31, 12, yy) - 2415021
+    k = int(math.floor(off / 29.530588853))
+    nm = _new_moon_jd(k, time_zone)
+    sun_long = _sun_longitude(nm, time_zone)
+    if sun_long >= 9:
+        nm = _new_moon_jd(k - 1, time_zone)
+    return nm
+
+
+def _leap_month_offset(a11: int, time_zone: float = 7.0) -> int:
+    k = int(math.floor((a11 - 2415021.076998695) / 29.530588853 + 0.5))
+    last = 0
+    i = 1
+    arc = _sun_longitude(_new_moon_jd(k + i, time_zone), time_zone)
+    while True:
+        last = arc
+        i += 1
+        arc = _sun_longitude(_new_moon_jd(k + i, time_zone), time_zone)
+        if not (arc != last and i < 14):
+            break
+    return i - 1
+
+
+def gregorian_to_lunar(dd: int, mm: int, yy: int, time_zone: float = 7.0) -> Tuple[int, int, int, bool]:
+    day_number = _jd_from_date(dd, mm, yy)
+    k = int(math.floor((day_number - 2415021.076998695) / 29.530588853))
+    month_start = _new_moon_jd(k + 1, time_zone)
+    if month_start > day_number:
+        month_start = _new_moon_jd(k, time_zone)
+    a11 = _lunar_month_11_jd(yy, time_zone)
+    b11 = a11
+    if a11 >= month_start:
+        lunar_year = yy
+        a11 = _lunar_month_11_jd(yy - 1, time_zone)
+    else:
+        lunar_year = yy + 1
+        b11 = _lunar_month_11_jd(yy + 1, time_zone)
+    lunar_day = day_number - month_start + 1
+    diff = int(math.floor((month_start - a11) / 29.0))
+    lunar_leap = False
+    lunar_month = diff + 11
+    if b11 - a11 > 365:
+        leap_month_diff = _leap_month_offset(a11, time_zone)
+        if diff >= leap_month_diff:
+            lunar_month = diff + 10
+            if diff == leap_month_diff:
+                lunar_leap = True
+    if lunar_month > 12:
+        lunar_month -= 12
+    if lunar_month >= 11 and diff < 4:
+        lunar_year -= 1
+    return int(lunar_day), int(lunar_month), int(lunar_year), bool(lunar_leap)
+
+
 class MaiHoaDichSoCore:
     BAT_QUAI = {
         1: {"name": "Càn", "nature": "Thiên", "element": "Kim", "bits": [1, 1, 1]},
@@ -703,15 +813,50 @@ class MaiHoaDichSoCore:
         8: {"name": "Khôn", "nature": "Địa", "element": "Thổ", "bits": [0, 0, 0]},
     }
 
+    HAO_TUONG_TAI_LOC = {
+        1: "hào sơ (hào 1 — mầm động dưới đáy): dòng tiền mới chớm dịch chuyển ở tầng khởi phát, vốn còn nhỏ, dễ bị chi phối bởi những khoản lặt vặt ban đầu.",
+        2: "hào nhị (hào 2 — trung vị nội quái): nền tảng tài chính bên trong đang giữ nhịp, có độ chững nhưng vẫn chịu ảnh hưởng từ các mối liên kết sát sườn.",
+        3: "hào tam (hào 3 — đỉnh nội quái, giáp ranh ngoại quái): điểm bản lề giữa lực giữ bên trong và biến động bên ngoài, dễ nảy sinh phân vân hoặc phát sinh chi ngoài dự tính.",
+        4: "hào tứ (hào 4 — đáy ngoại quái): dòng tiền bắt đầu bước ra môi trường bên ngoài, va chạm trực tiếp với biến số thị trường và ngoại lực.",
+        5: "hào ngũ (hào 5 — quân vị ngoại quái): vị trí chi phối cục diện, cho thấy dòng tiền lớn hoặc tâm điểm quyết định đang lộ rõ nhưng áp lực cũng lớn.",
+        6: "hào thượng (hào 6 — cực hào trên cùng): giai đoạn cực biến của một nhịp vận động, dễ sang chiều đảo ngược nếu chạy theo đà cực đoan.",
+    }
+
+    QUAI_TUONG_TAI_LOC = {
+        1: "tượng Càn (Trời): thế mạnh, dứt khoát, chủ về quyền chủ động và dòng lực lớn, nhưng nếu quá cứng nhắc thì dễ bỏ lỡ nhịp điều chỉnh",
+        2: "tượng Đoài (Đầm/Ao): tượng của sự mở ra, trao đổi, hỷ khí hoặc buông lỏng tay chi tiêu nếu thiếu điểm dừng",
+        3: "tượng Ly (Lửa): tượng của sự sáng tỏ, bộc lộ và nhịp chạy nhanh, nhưng khí nóng dễ bốc, thiếu bền nếu vội vàng",
+        4: "tượng Chấn (Sấm): tượng của chấn động và khởi phát nhanh, dễ tạo cú hích tức thời nhưng biến động cũng nhanh",
+        5: "tượng Tốn (Gió): tượng của sự thẩm thấu, linh hoạt và uyển chuyển, đi theo hướng thuận chiều nhưng đôi khi thiếu độ quyết đoán",
+        6: "tượng Khảm (Nước): tượng của dòng chảy ngầm, ẩn khuất, chiều sâu hoặc trắc trở, che lấp tầm nhìn về nguồn thu",
+        7: "tượng Cấn (Núi): tượng của sự dừng lại, giữ vững và tạo điểm tựa, giúp hãm đà tiêu hao nhưng cũng làm nhịp xoay chậm lại",
+        8: "tượng Khôn (Đất): tượng của sự nâng đỡ, tích chứa và thuận theo, chịu tải tốt nhưng thiên về tĩnh và chờ thời",
+    }
+
+    CHI_NAMES = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"]
+
     CHI_GIO = [
-        ("Tý (23h-01h)", 1), ("Sửu (01h-03h)", 2), ("Dần (03h-05h)", 3),
-        ("Mão (05h-07h)", 4), ("Thìn (07h-09h)", 5), ("Tỵ (09h-11h)", 6),
-        ("Ngọ (11h-13h)", 7), ("Mùi (13h-15h)", 8), ("Thân (15h-17h)", 9),
-        ("Dậu (17h-19h)", 10), ("Tuất (19h-21h)", 11), ("Hợi (21h-23h)", 12)
+        ("Tý (23h-01h)", 1),
+        ("Sửu (01h-03h)", 2),
+        ("Dần (03h-05h)", 3),
+        ("Mão (05h-07h)", 4),
+        ("Thìn (07h-09h)", 5),
+        ("Tỵ (09h-11h)", 6),
+        ("Ngọ (11h-13h)", 7),
+        ("Mùi (13h-15h)", 8),
+        ("Thân (15h-17h)", 9),
+        ("Dậu (17h-19h)", 10),
+        ("Tuất (19h-21h)", 11),
+        ("Hợi (21h-23h)", 12),
     ]
 
     NGU_HANH_SINH = {"Kim": "Thủy", "Thủy": "Mộc", "Mộc": "Hỏa", "Hỏa": "Thổ", "Thổ": "Kim"}
     NGU_HANH_KHAC = {"Kim": "Mộc", "Mộc": "Thổ", "Thổ": "Thủy", "Thủy": "Hỏa", "Hỏa": "Kim"}
+
+    @staticmethod
+    def _mod_1_to_n(val: int, n: int) -> int:
+        rem = val % n
+        return n if rem == 0 else rem
 
     @classmethod
     def _bits_to_quai_id(cls, bits: List[int]) -> int:
@@ -721,74 +866,228 @@ class MaiHoaDichSoCore:
         return 8
 
     @classmethod
-    def cast_hexagram(cls, dt: datetime) -> Dict[str, Any]:
-        hour_idx = ((dt.hour + 1) // 2) % 12
-        chi_name, gio_num = cls.CHI_GIO[hour_idx]
+    def _format_quai_pair(cls, thuong_id: int, ha_id: int) -> str:
+        t = cls.BAT_QUAI[thuong_id]
+        h = cls.BAT_QUAI[ha_id]
+        return f"{t['nature']} {h['nature']} ({t['name']} trên - {h['name']} dưới)"
 
-        nam_num = ((dt.year - 4) % 12) + 1
-        thang_num = dt.month
-        ngay_num = dt.day
+    @classmethod
+    def _classify_the_dung_relation(cls, the_elem: str, dung_elem: str) -> Tuple[str, str, str]:
+        if cls.NGU_HANH_SINH.get(dung_elem) == the_elem:
+            return "Dụng sinh Thể", "CAT", f"Dụng ({dung_elem}) sinh Thể ({the_elem})"
+        if the_elem == dung_elem:
+            return "Thể Dụng tỷ hòa", "CAT", f"Thể ({the_elem}) và Dụng ({dung_elem}) cùng hành"
+        if cls.NGU_HANH_KHAC.get(the_elem) == dung_elem:
+            return "Thể khắc Dụng", "BINH", f"Thể ({the_elem}) khắc Dụng ({dung_elem})"
+        if cls.NGU_HANH_SINH.get(the_elem) == dung_elem:
+            return "Thể sinh Dụng", "BINH", f"Thể ({the_elem}) sinh Dụng ({dung_elem})"
+        return "Dụng khắc Thể", "BI", f"Dụng ({dung_elem}) khắc Thể ({the_elem})"
 
-        tong_thuong = nam_num + thang_num + ngay_num
-        thuong_id = tong_thuong % 8
-        thuong_id = 8 if thuong_id == 0 else thuong_id
+    @classmethod
+    def _classify_bien_trend(cls, the_elem: str, bien_the_elem: str) -> str:
+        if cls.NGU_HANH_SINH.get(bien_the_elem) == the_elem:
+            return (
+                f"Chuyển sang Quẻ Biến thấy khí của Biến ({bien_the_elem}) sinh trợ cho Thể ({the_elem}), "
+                f"nên xu hướng về sau của dòng tiền có phần được bồi đắp và dịu bớt áp lực hơn so với lúc khởi quẻ."
+            )
+        if bien_the_elem == the_elem:
+            return (
+                f"Chuyển sang Quẻ Biến thấy hành của Biến ({bien_the_elem}) đồng khí với Thể ({the_elem}), "
+                f"cho thấy chiều hướng về sau giữ nhịp tương đối ổn định, ít đảo chiều đột ngột."
+            )
+        if cls.NGU_HANH_KHAC.get(the_elem) == bien_the_elem:
+            return (
+                f"Chuyển sang Quẻ Biến thấy Thể ({the_elem}) khắc Biến ({bien_the_elem}), "
+                f"xu hướng sau vẫn nằm trong tầm chi phối của Thể nhưng càng về sau càng dễ hao sức nếu kéo dài."
+            )
+        if cls.NGU_HANH_SINH.get(the_elem) == bien_the_elem:
+            return (
+                f"Chuyển sang Quẻ Biến thấy Thể ({the_elem}) sinh cho Biến ({bien_the_elem}), "
+                f"cảnh báo xu hướng về sau dễ bị rút bớt khí lực/dòng tiền, không nên kỳ vọng thu hoạch lớn ở chặng cuối."
+            )
+        return (
+            f"Chuyển sang Quẻ Biến thấy Biến ({bien_the_elem}) khắc chế Thể ({the_elem}), "
+            f"báo hiệu về sau dễ gặp trở ngại hoặc biến số bất lợi cho tài lộc; cần giữ chặt vốn từ sớm."
+        )
 
-        tong_ha = tong_thuong + gio_num
-        ha_id = tong_ha % 8
-        ha_id = 8 if ha_id == 0 else ha_id
+    @classmethod
+    def _build_wealth_reading(
+        cls,
+        thuong_id: int,
+        ha_id: int,
+        hao_dong: int,
+        thuong_ho_id: int,
+        ha_ho_id: int,
+        thuong_bien_id: int,
+        ha_bien_id: int,
+        the_id: int,
+        dung_id: int,
+        bien_the_id: int,
+        relation: str,
+        zone: str,
+        short_rel: str,
+    ) -> Dict[str, str]:
+        the_info = cls.BAT_QUAI[the_id]
+        dung_info = cls.BAT_QUAI[dung_id]
+        chu_str = cls._format_quai_pair(thuong_id, ha_id)
+        ho_str = cls._format_quai_pair(thuong_ho_id, ha_ho_id)
+        bien_str = cls._format_quai_pair(thuong_bien_id, ha_bien_id)
 
-        hao_dong = tong_ha % 6
-        hao_dong = 6 if hao_dong == 0 else hao_dong
+        hao_note = cls.HAO_TUONG_TAI_LOC[hao_dong]
+        the_tuong = cls.QUAI_TUONG_TAI_LOC[the_id]
+        dung_tuong = cls.QUAI_TUONG_TAI_LOC[dung_id]
+        bien_trend_note = cls._classify_bien_trend(the_info["element"], cls.BAT_QUAI[bien_the_id]["element"])
+
+        if relation == "Dụng sinh Thể":
+            zone_label = "🟢 TÀI LỘC THUẬN KHÍ (Dụng sinh Thể) — Ngoại cảnh sinh trợ cho Thể"
+            wealth_analysis = (
+                f"Thể là {the_info['name']} ({the_info['element']}), Dụng là {dung_info['name']} ({dung_info['element']}). "
+                f"Xét về tài lộc, 'Dụng sinh Thể' là thế ngoại lực và thời thế đang sinh trợ cho phần Thể, "
+                f"khí tài lộc có đường tiếp ứng nhưng cần biết giữ nhịp và có điểm neo để không tiêu tán vô ích."
+            )
+            wealth_advice = (
+                "Thời vận tài lộc lúc này có lực sinh trợ, nhưng chỉ nên đi từng bước có tính toán và đặt rõ hạn mức vốn từ đầu. "
+                "Thấy thuận càng không được mở tay quá trớn hay nâng mức mạo hiểm vượt tầm kiểm soát."
+            )
+        elif relation == "Thể Dụng tỷ hòa":
+            zone_label = "🟢 TÀI LỘC TỶ HÒA (Thể Dụng đồng hành) — Nội lực và ngoại cảnh ngang sức"
+            wealth_analysis = (
+                f"Thể ({the_info['name']}, hành {the_info['element']}) và Dụng ({dung_info['name']}, hành {dung_info['element']}) cùng hành tương trợ. "
+                f"Xét về tài lộc, thế 'Tỷ hòa' cho thấy sức của Thể và lực bên ngoài cân bằng, dòng tiền ít bị chèn ép đột ngột nhưng cũng khó bật mạnh nếu thiếu yếu tố thúc đẩy."
+            )
+            wealth_advice = (
+                "Dòng tiền lúc này ở thế quân bình, hợp giữ nhịp đều và quan sát hơn là dồn vốn đánh lớn. "
+                "Cứ đúng phần ngân sách đã định mà làm, tránh chạy theo tâm lý đám đông."
+            )
+        elif relation == "Thể khắc Dụng":
+            zone_label = "🟡 TÀI LỘC CHỦ ĐỘNG CÓ HAO LỰC (Thể khắc Dụng) — Chế ngự được nhưng tiêu hao sức lực"
+            wealth_analysis = (
+                f"Thể ({the_info['name']}, hành {the_info['element']}) khắc chế Dụng ({dung_info['name']}, hành {dung_info['element']}). "
+                f"Xét về tài lộc, 'Thể khắc Dụng' là thế Thể chủ động chi phối cơ hội, nhưng 'khắc xuất' thì có hao tổn khí lực, công sức hoặc chi phí để giành phần hơn."
+            )
+            wealth_advice = (
+                "Có thể nắm thế chủ động nhưng phải đánh đổi bằng sức lực và sự tỉnh táo. "
+                "Nếu tham gia tài chính chỉ nên giữ ở mức nhỏ gọn, có điểm dừng rõ ràng, không kéo dài sa đà."
+            )
+        elif relation == "Thể sinh Dụng":
+            zone_label = "🟡 TÀI LỘC TIẾT KHÍ (Thể sinh Dụng) — Nội lực sinh xuất cho Dụng"
+            wealth_analysis = (
+                f"Thể ({the_info['name']}, hành {the_info['element']}) sinh cho Dụng ({dung_info['name']}, hành {dung_info['element']}). "
+                f"Xét về tài lộc, đây là thế 'Thể sinh Dụng' (sinh xuất/tiết khí): phần Thể dồn lực nuôi bên ngoài nên dễ hao hụt nội lực, làm nhiều hoặc chi nhiều mà lực thu về chưa tương xứng."
+            )
+            wealth_advice = (
+                "Lực tài chính lúc này đang có xu hướng sinh xuất ra bên ngoài, không phải lúc mở rộng chi tiêu hay mạo hiểm. "
+                "Nên thu gọn đầu mối, giữ chặt phần vốn gốc và chờ thời khí chuyển sang thuận hơn."
+            )
+        else:
+            zone_label = "🔴 TÀI LỘC GẶP NGHỊCH KHÍ (Dụng khắc Thể) — Ngoại lực khắc chế Thể"
+            wealth_analysis = (
+                f"Dụng ({dung_info['name']}, hành {dung_info['element']}) khắc chế Thể ({the_info['name']}, hành {the_info['element']}). "
+                f"Xét về tài lộc, 'Dụng khắc Thể' là thế ngoại cảnh và biến số bên ngoài gây áp lực lên Thể, dễ phát sinh trắc trở, hao hụt hoặc quyết định vội vàng dẫn tới bất lợi cho túi tiền."
+            )
+            wealth_advice = (
+                "Thời vận tài lộc lúc này đang chịu nghịch lực, càng cố ép càng dễ vướng tổn thất. "
+                "Ưu tiên hàng đầu là giữ chặt nguồn vốn, khoanh vùng rủi ro và đứng ngoài các nhịp mạo hiểm."
+            )
+
+        scholar_commentary = (
+            f"Quẻ Chủ lập được {chu_str}, động tại {hao_note} "
+            f"Diễn biến ngầm bên trong kết thành Hỗ quái {ho_str}, rồi chuyển sang Quẻ Biến {bien_str} để mở ra xu hướng kế tiếp. "
+            f"{bien_trend_note} "
+            f"{wealth_analysis} "
+            f"Xét riêng về tượng tài lộc: phía Thể mang {the_tuong}, còn phía Dụng mang {dung_tuong}."
+        )
+
+        return {
+            "zone": zone,
+            "zone_label": zone_label,
+            "summary": f"{wealth_analysis} ({short_rel})",
+            "scholar_commentary": scholar_commentary,
+            "advice": wealth_advice,
+        }
+
+    @classmethod
+    def cast_hexagram(cls, dt: datetime, tz_offset_hours: float = 7.0) -> Dict[str, Any]:
+        dt_local = dt.astimezone(VN_TZ) if dt.tzinfo is not None else dt.replace(tzinfo=VN_TZ)
+
+        lunar_day, lunar_month, lunar_year, is_leap = gregorian_to_lunar(
+            dt_local.day, dt_local.month, dt_local.year, time_zone=tz_offset_hours
+        )
+
+        year_chi_idx = (lunar_year - 4) % 12
+        year_chi_name = cls.CHI_NAMES[year_chi_idx]
+        nam_so = year_chi_idx + 1
+
+        hour_idx = ((dt_local.hour + 1) // 2) % 12
+        chi_gio_label, gio_so = cls.CHI_GIO[hour_idx]
+
+        tong_thuong = nam_so + lunar_month + lunar_day
+        thuong_id = cls._mod_1_to_n(tong_thuong, 8)
+
+        tong_ha = tong_thuong + gio_so
+        ha_id = cls._mod_1_to_n(tong_ha, 8)
+        hao_dong = cls._mod_1_to_n(tong_ha, 6)
 
         ha_bits = cls.BAT_QUAI[ha_id]["bits"].copy()
         thuong_bits = cls.BAT_QUAI[thuong_id]["bits"].copy()
         full_bits = ha_bits + thuong_bits
 
+        ha_ho_id = cls._bits_to_quai_id(full_bits[1:4])
+        thuong_ho_id = cls._bits_to_quai_id(full_bits[2:5])
+
         bien_bits = full_bits.copy()
         bien_bits[hao_dong - 1] = 1 - bien_bits[hao_dong - 1]
-
         ha_bien_id = cls._bits_to_quai_id(bien_bits[:3])
         thuong_bien_id = cls._bits_to_quai_id(bien_bits[3:])
 
         if hao_dong <= 3:
-            the_id, dung_id = thuong_id, ha_id
-            the_pos = "Thượng Quái"
-        else:
             the_id, dung_id = ha_id, thuong_id
-            the_pos = "Hạ Quái"
+            bien_the_id = ha_bien_id
+            the_pos = "Hạ Quái (hào 1-3)"
+        else:
+            the_id, dung_id = thuong_id, ha_id
+            bien_the_id = thuong_bien_id
+            the_pos = "Thượng Quái (hào 4-6)"
 
         the_elem = cls.BAT_QUAI[the_id]["element"]
         dung_elem = cls.BAT_QUAI[dung_id]["element"]
-
-        if the_elem == dung_elem or cls.NGU_HANH_SINH.get(dung_elem) == the_elem:
-            zone = "CAT"
-            zone_label = "🟢 VÙNG CÁT — Thời điểm thuận lợi & Tâm thế vững vàng"
-            summary = f"Dụng ({dung_elem}) tương sinh/tỷ hòa với Thể ({the_elem}). Nhịp năng lượng thời điểm hanh thông, nội ngoại đồng thuận."
-            advice = "Tham gia với ngân sách chủ động và quản trị nguồn vốn hợp lý, đảm bảo tuyệt đối không ảnh hưởng tới tài chính cá nhân hoặc gia đình."
-        elif cls.NGU_HANH_SINH.get(the_elem) == dung_elem or cls.NGU_HANH_KHAC.get(the_elem) == dung_elem:
-            zone = "BINH"
-            zone_label = "🟡 VÙNG BÌNH — Thời điểm trung lập & Cần tiết chế"
-            summary = f"Thể ({the_elem}) sinh xuất hoặc khắc chế Dụng ({dung_elem}). Vạn vật ở thế cân bằng tĩnh, cần quan sát kỹ lưỡng."
-            advice = "Bối cảnh hiện tại phù hợp để quan sát dữ liệu và rèn luyện kỷ luật hơn là hành động mạnh. Ưu tiên bảo toàn lực lượng."
-        else:
-            zone = "BI"
-            zone_label = "🔴 VÙNG BĨ — Cảnh báo rủi ro & Cảm xúc dễ dao động"
-            summary = f"Dụng ({dung_elem}) khắc Thể ({the_elem}). Tín hiệu tượng quẻ cho thấy năng lượng xung đột và tâm lý nóng vội."
-            advice = "KHUYẾN NGHỊ TỐI THƯỢNG: TẠM DỪNG THAM GIA! Đóng ví ngay lập tức, giữ chặt nguồn vốn và tuyệt đối không phát sinh chi phí mạo hiểm."
-
-        que_chu_name = f"{cls.BAT_QUAI[thuong_id]['nature']} {cls.BAT_QUAI[ha_id]['nature']} ({cls.BAT_QUAI[thuong_id]['name']} trên - {cls.BAT_QUAI[ha_id]['name']} dưới)"
-        que_bien_name = f"{cls.BAT_QUAI[thuong_bien_id]['nature']} {cls.BAT_QUAI[ha_bien_id]['nature']} ({cls.BAT_QUAI[thuong_bien_id]['name']} trên - {cls.BAT_QUAI[ha_bien_id]['name']} dưới)"
+        relation, zone, short_rel = cls._classify_the_dung_relation(the_elem, dung_elem)
+        reading = cls._build_wealth_reading(
+            thuong_id=thuong_id,
+            ha_id=ha_id,
+            hao_dong=hao_dong,
+            thuong_ho_id=thuong_ho_id,
+            ha_ho_id=ha_ho_id,
+            thuong_bien_id=thuong_bien_id,
+            ha_bien_id=ha_bien_id,
+            the_id=the_id,
+            dung_id=dung_id,
+            bien_the_id=bien_the_id,
+            relation=relation,
+            zone=zone,
+            short_rel=short_rel,
+        )
 
         return {
-            "timestamp": dt.strftime("%H:%M:%S — %d/%m/%Y"),
-            "chi_gio": chi_name,
-            "que_chu": que_chu_name,
-            "hao_dong": f"Hào {hao_dong} ({the_pos} làm Thể - hành {the_elem})",
-            "que_bien": que_bien_name,
-            "zone": zone,
-            "zone_label": zone_label,
-            "summary": summary,
-            "advice": advice
+            "timestamp": dt_local.strftime("%H:%M:%S — %d/%m/%Y"),
+            "lunar_date": f"Ngày {lunar_day} tháng {lunar_month}{' (nhuận)' if is_leap else ''} năm {year_chi_name} ({lunar_year})",
+            "lunar_components": {
+                "nam_so": nam_so,
+                "lunar_month": lunar_month,
+                "lunar_day": lunar_day,
+                "gio_so": gio_so,
+            },
+            "chi_gio": chi_gio_label,
+            "que_chu": cls._format_quai_pair(thuong_id, ha_id),
+            "hao_dong": f"Hào {hao_dong} — Thể tại {the_pos} ({cls.BAT_QUAI[the_id]['name']}, hành {the_elem}) | Dụng hành {dung_elem}",
+            "que_ho": cls._format_quai_pair(thuong_ho_id, ha_ho_id),
+            "que_bien": cls._format_quai_pair(thuong_bien_id, ha_bien_id),
+            "relation": relation,
+            "zone": reading["zone"],
+            "zone_label": reading["zone_label"],
+            "summary": reading["summary"],
+            "scholar_commentary": reading["scholar_commentary"],
+            "advice": reading["advice"],
         }
 
 
@@ -860,7 +1159,7 @@ st.markdown("""
         </div>
         <p class="philosophy-text">
             Ứng dụng không được thiết kế để bẻ khóa hay chiến thắng <span class="philosophy-highlight">sự ngẫu nhiên không đoán định của xổ số</span>. 
-            Thay vào đó, đây là hệ thống phân tích định lượng đa chiều giúp bạn chuyển hóa từ việc lựa chọn không chủ ý sang <span class="philosophy-highlight">lựa chọn có lý do, có kỷ luật và quản trị cảm xúc cá nhân</span> một cách văn minh nhất.
+            Thay vào đó, đây là hệ thống phân tích định lượng đa chiều giúp bạn chuyển hóa từ việc lựa chọn mù quáng sang <span class="philosophy-highlight">lựa chọn có lý do, có kỷ luật và quản trị cảm xúc cá nhân</span> một cách văn minh nhất.
         </p>
     </div>
 """, unsafe_allow_html=True)
@@ -871,7 +1170,7 @@ st.markdown("""
     • <b>Hội đồng Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp, Bản mệnh Nạp Âm & Cung Phi Lạc Thư (Tôn trọng đa dạng giới tính với cơ chế trung hòa trọng số động).<br>
     • <b>Hội đồng Phương Tây:</b> Chiêm tinh cổ điển 3 Tầng — Tứ đại Nguyên tố (Triplicities), Phẩm tính Vận động (Modalities: Cardinal/Fixed/Mutable) & Hành tinh Đắc vị.<br>
     • <b>Hội đồng Thống kê Ma trận:</b> Phân tích tần suất lịch sử đa chiều ưu tiên FetchData trực tiếp lấy kỳ gần nhất, Smart Cache tích lũy và GitHub Backup khi lỗi với chiến lược động (Hot / Neutral / Cold).<br>
-    • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia tư vấn hành vi độc lập theo thời điểm động tâm thực tế (Real-time VN_TZ) — phân định Vùng Cát / Bình / Bĩ gắn liền trạng thái quẻ Thể-Dụng làm lớp phanh an toàn quản trị vốn.<br>
+    • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia xét thời vận tài lộc theo Âm lịch & Giờ Chi thực tế — phân định 5 quan hệ Thể-Dụng, Hỗ quái, xu hướng Quẻ Biến và kỷ luật quản trị vốn.<br>
     • <b>Trợ lý AI Gemini Engine:</b> Giao thức REST API chuẩn hóa giải mã mã nguồn, luận giải thuật toán và cố vấn kỷ luật tài chính dưới lăng kính xã hội học.
 </div>
 """, unsafe_allow_html=True)
@@ -1168,19 +1467,18 @@ if run_clicked:
 st.divider()
 
 # =====================================================================
-# 🌸 8. TRẠM MAI HOA DỊCH SỐ — CHUYÊN GIA TƯ VẤN HÀNH VI (REAL-TIME UPDATE)
+# 🌸 8. TRẠM MAI HOA DỊCH SỐ — THỜI VẬN TÀI LỘC (KẾT LUẬN TRỌNG TÂM)
 # =====================================================================
-with st.expander("🌸 Mai Hoa Dịch Số — Trạm Chiêm Nghiệm Thời Vận & Kỷ Luật (Tư vấn Hành vi)", expanded=False):
+with st.expander("🌸 Mai Hoa Dịch Số — Thời Vận Tài Lộc & Kỷ Luật Vốn", expanded=False):
     st.markdown(
-        "<div style='font-size: 13.5px; color: #C5CAE9; margin-bottom: 10px;'>"
-        "<b>📖 Vai trò & Học thuật:</b> Sau khi xem xét các bộ số định lượng, mô-đun này cung cấp một góc nhìn tham vấn "
-        "về thời vận dựa trên phương pháp <i>Mai Hoa Dịch Số</i> theo thời điểm động tâm thực tế. "
-        "<b>Đứng độc lập hoàn toàn</b>, đây là lớp phanh an toàn giúp đánh giá nhịp sinh học tài chính và tâm lý kỷ luật của bạn."
+        "<div style='font-size: 13px; color: #C5CAE9; margin-bottom: 10px; line-height: 1.55;'>"
+        "Khởi quẻ theo thời điểm động tâm thực tế (Âm lịch + Giờ Chi), tập trung đánh giá <b>thời vận tài lộc</b> "
+        "qua quan hệ Thể – Dụng, Hỗ quái và xu hướng Quẻ Biến."
         "</div>",
         unsafe_allow_html=True
     )
 
-    if st.button("🧭 Khởi Tạo Quẻ Thời Vận Hiện Tại (Lấy Thời Điểm Động Tâm Real-time)", key="btn_mai_hoa_bottom"):
+    if st.button("🧭 Khởi Tạo Quẻ Tài Lộc Lúc Này (Real-time)", key="btn_mai_hoa_bottom"):
         st.session_state["dong_tam_time"] = now_vn()
     elif "dong_tam_time" not in st.session_state:
         st.session_state["dong_tam_time"] = now_vn()
@@ -1189,30 +1487,32 @@ with st.expander("🌸 Mai Hoa Dịch Số — Trạm Chiêm Nghiệm Thời V�
 
     st.markdown(f"""
     <div class="iching-card">
-        <div style="font-size: 13px; color: #D4AF37; font-weight: bold; margin-bottom: 6px;">
-            ⏳ Thời điểm động tâm (Real-time): {iching_res['timestamp']} • Giờ {iching_res['chi_gio']}
+        <div style="font-size: 12.5px; color: #D4AF37; margin-bottom: 6px;">
+            ⏳ Động tâm: <b>{iching_res['timestamp']}</b> • Giờ <b>{iching_res['chi_gio']}</b><br>
+            <i>{iching_res['lunar_date']}</i>
         </div>
-        <div style="font-size: 14px; color: #FAFAFA; line-height: 1.6;">
+        <div class="iching-conclusion-box">
+            <div style="font-size: 15.5px; font-weight: bold; margin-bottom: 6px;">
+                {iching_res['zone_label']}
+            </div>
+            <div style="font-size: 14px; color: #FAFAFA; line-height: 1.65;">
+                <b>🎯 Kết luận & Kỷ luật tài lộc:</b> {iching_res['advice']}
+            </div>
+        </div>
+        <div class="iching-meta-grid">
             • <b>Quẻ Chủ:</b> {iching_res['que_chu']}<br>
             • <b>Hào Động:</b> {iching_res['hao_dong']}<br>
+            • <b>Hỗ Quái:</b> {iching_res['que_ho']}<br>
             • <b>Quẻ Biến:</b> {iching_res['que_bien']}
-        </div>
-        <hr style="border-color: #2E3446; margin: 10px 0;">
-        <div style="font-size: 15px; font-weight: bold; margin-bottom: 6px;">
-            {iching_res['zone_label']}
-        </div>
-        <div style="font-size: 13px; color: #B0BEC5; margin-bottom: 8px;">
-            <i>Luận giải Thể - Dụng:</i> {iching_res['summary']}
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    if iching_res["zone"] == "CAT":
-        st.success(f"💡 **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
-    elif iching_res["zone"] == "BINH":
-        st.warning(f"⚖️ **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
-    else:
-        st.error(f"🛡️ **Khuyến nghị Quản trị Vốn:** {iching_res['advice']}")
+    with st.expander("📜 Luận giải Học thuật Mai Hoa Dịch Số (Thể – Dụng, Tượng Tài Lộc & Quẻ Biến)", expanded=False):
+        st.markdown(
+            f"<div style='font-size: 13.5px; color: #DCE3EA; line-height: 1.72;'>{iching_res['scholar_commentary']}</div>",
+            unsafe_allow_html=True
+        )
 
 st.divider()
 
@@ -1253,7 +1553,7 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                             "- `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định). "
                             "- `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố, Phẩm tính Vận động, Hành tinh Đắc vị). "
                             "- `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold trên tập dữ liệu lịch sử thật. "
-                            "- `MaiHoaDichSoCore`: Trạm chiêm nghiệm Mai Hoa Dịch Số đánh giá thời vận (Cát/Bình/Bĩ) và kỷ luật quản trị vốn real-time. "
+                            "- `MaiHoaDichSoCore` / `gregorian_to_lunar`: Khởi quẻ theo Âm lịch + Giờ Chi thực tế, xuất Quẻ Chủ, Hào Động, Hỗ Quái, Quẻ Biến, phân định 5 quan hệ Thể-Dụng và luận thời vận tài lộc. "
                             "QUY TẮC BẮT BUỘC: Trả lời thẳng vào bản chất kỹ thuật, trích dẫn trực tiếp tên hàm/logic thật trong mã nguồn, dùng ngôn ngữ tâm lý hành vi để giải thích, "
                             "và luôn nhắc nhở sòng phẳng rằng xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật quản trị cảm xúc chứ không phải công cụ bẻ khóa."
                         )
