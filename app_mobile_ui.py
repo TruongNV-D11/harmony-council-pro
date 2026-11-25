@@ -814,23 +814,31 @@ class MaiHoaDichSoCore:
     }
 
     HAO_TUONG_TAI_LOC = {
-        1: "hào sơ (hào 1 — mầm động dưới đáy): dòng tiền mới chớm dịch chuyển ở tầng khởi phát, vốn còn nhỏ, dễ bị chi phối bởi những khoản lặt vặt ban đầu.",
-        2: "hào nhị (hào 2 — trung vị nội quái): nền tảng tài chính bên trong đang giữ nhịp, có độ chững nhưng vẫn chịu ảnh hưởng từ các mối liên kết sát sườn.",
-        3: "hào tam (hào 3 — đỉnh nội quái, giáp ranh ngoại quái): điểm bản lề giữa lực giữ bên trong và biến động bên ngoài, dễ nảy sinh phân vân hoặc phát sinh chi ngoài dự tính.",
-        4: "hào tứ (hào 4 — đáy ngoại quái): dòng tiền bắt đầu bước ra môi trường bên ngoài, va chạm trực tiếp với biến số thị trường và ngoại lực.",
-        5: "hào ngũ (hào 5 — quân vị ngoại quái): vị trí chi phối cục diện, cho thấy dòng tiền lớn hoặc tâm điểm quyết định đang lộ rõ nhưng áp lực cũng lớn.",
-        6: "hào thượng (hào 6 — cực hào trên cùng): giai đoạn cực biến của một nhịp vận động, dễ sang chiều đảo ngược nếu chạy theo đà cực đoan.",
+        1: "hào sơ (hào 1 — hào dưới cùng của hạ quái): khí động mới chớm ở tầng khởi phát, dòng vốn còn nhỏ, dễ bị chi phối bởi những tác động mở đầu.",
+        2: "hào nhị (hào 2 — trung vị hạ quái): nội lực giữ nhịp ở tầng nền tảng, có độ chững nhưng vẫn chịu ảnh hưởng sát sườn từ môi trường xung quanh.",
+        3: "hào tam (hào 3 — đỉnh hạ quái, sát ranh ngoại quái): điểm bản lề giữa lực giữ bên trong và biến động bên ngoài, dễ phát sinh do dự hoặc chi ngoài dự liệu.",
+        4: "hào tứ (hào 4 — đáy ngoại quái): dòng tiền bắt đầu bước ra ngoại cảnh, va chạm trực tiếp với bối cảnh biến động và tác động bên ngoài.",
+        5: "hào ngũ (hào 5 — trung vị ngoại quái): vị trí chủ đạo của ngoại quái, phản ánh tâm điểm chi phối cục diện nhưng áp lực vận hành cũng lớn.",
+        6: "hào thượng (hào 6 — hào trên cùng của thượng quái): giai đoạn cực biến của một nhịp vận động, dễ sang chiều đảo ngược nếu chạy theo đà cực đoan.",
     }
 
     QUAI_TUONG_TAI_LOC = {
-        1: "tượng Càn (Trời): thế mạnh, dứt khoát, chủ về quyền chủ động và dòng lực lớn, nhưng nếu quá cứng nhắc thì dễ bỏ lỡ nhịp điều chỉnh",
-        2: "tượng Đoài (Đầm/Ao): tượng của sự mở ra, trao đổi, hỷ khí hoặc buông lỏng tay chi tiêu nếu thiếu điểm dừng",
-        3: "tượng Ly (Lửa): tượng của sự sáng tỏ, bộc lộ và nhịp chạy nhanh, nhưng khí nóng dễ bốc, thiếu bền nếu vội vàng",
-        4: "tượng Chấn (Sấm): tượng của chấn động và khởi phát nhanh, dễ tạo cú hích tức thời nhưng biến động cũng nhanh",
-        5: "tượng Tốn (Gió): tượng của sự thẩm thấu, linh hoạt và uyển chuyển, đi theo hướng thuận chiều nhưng đôi khi thiếu độ quyết đoán",
-        6: "tượng Khảm (Nước): tượng của dòng chảy ngầm, ẩn khuất, chiều sâu hoặc trắc trở, che lấp tầm nhìn về nguồn thu",
-        7: "tượng Cấn (Núi): tượng của sự dừng lại, giữ vững và tạo điểm tựa, giúp hãm đà tiêu hao nhưng cũng làm nhịp xoay chậm lại",
-        8: "tượng Khôn (Đất): tượng của sự nâng đỡ, tích chứa và thuận theo, chịu tải tốt nhưng thiên về tĩnh và chờ thời",
+        1: "tượng Càn (Trời): tính cương kiện, chủ động và lực lớn, nhưng nếu quá cứng nhắc thì dễ thiếu linh hoạt khi thời thế đổi nhịp",
+        2: "tượng Đoài (Đầm/Ao): tính mở rộng, giao lưu và hỷ khí, nhưng nếu thiếu điểm dừng thì dễ buông lỏng tay chi tiêu",
+        3: "tượng Ly (Lửa): tính sáng rõ, bộc lộ và nhịp chạy nhanh, nhưng khí nóng dễ bốc, thiếu bền nếu vội vàng",
+        4: "tượng Chấn (Sấm): tính chấn động và khởi hành nhanh, dễ tạo biến động tức thời nhưng biên độ dao động lớn",
+        5: "tượng Tốn (Gió): tính thẩm thấu, linh hoạt và thuận theo, đi mềm mại nhưng đôi khi thiếu sự dứt khoát",
+        6: "tượng Khảm (Nước): tính tiềm ẩn, chiều sâu và dòng chảy ngầm, có thể là ẩn cơ nhưng cũng dễ che khuất hoặc gây trắc trở",
+        7: "tượng Cấn (Núi): tính dừng lại, giữ vững và tạo điểm tựa, giúp hãm đà tiêu hao nhưng làm nhịp xoay chậm lại",
+        8: "tượng Khôn (Đất): tính bao dung, tích chứa và thuận theo, chịu tải tốt nhưng thiên về tĩnh và chờ thời",
+    }
+
+    HO_QUAI_TAI_LOC = {
+        "Kim": "Hỗ quái thiên về hành Kim (thu gọn, kỷ luật, sàng lọc): diễn biến bên trong nghiêng về siết đầu mối và giữ biên độ gọn.",
+        "Mộc": "Hỗ quái thiên về hành Mộc (nảy nở, vươn ra, khởi phát): diễn biến ngầm có xu hướng mở động lực nhưng dễ biến động theo nhịp.",
+        "Thủy": "Hỗ quái thiên về hành Thủy (chảy ngầm, lưu thông, biến ảo): diễn biến bên trong còn ẩn khuất nhiều biến số chưa lộ rõ.",
+        "Hỏa": "Hỗ quái thiên về hành Hỏa (bộc lộ, lan tỏa, nhiệt cao): diễn biến ngầm có độ nóng và nhịp nhanh, dễ bốc nếu thiếu điểm neo.",
+        "Thổ": "Hỗ quái thiên về hành Thổ (tích tụ, trung chuyển, giữ nền): diễn biến ngầm thiên về chịu tải, giữ nhịp hoặc trì hoãn bước xoay.",
     }
 
     CHI_NAMES = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"]
@@ -884,30 +892,41 @@ class MaiHoaDichSoCore:
         return "Dụng khắc Thể", "BI", f"Dụng ({dung_elem}) khắc Thể ({the_elem})"
 
     @classmethod
+    def _classify_ho_trend(cls, thuong_ho_id: int, ha_ho_id: int) -> str:
+        t_elem = cls.BAT_QUAI[thuong_ho_id]["element"]
+        h_elem = cls.BAT_QUAI[ha_ho_id]["element"]
+        if t_elem == h_elem:
+            return cls.HO_QUAI_TAI_LOC[t_elem]
+        return (
+            f"Hỗ quái kết hợp hành {t_elem} (thượng hỗ) và {h_elem} (hạ hỗ), cho thấy diễn biến ngầm bên trong "
+            f"đang có sự giao thoa giữa hai lớp khí, cần quan sát kỹ nhịp chuyển tiếp trước khi tăng tỷ trọng vốn."
+        )
+
+    @classmethod
     def _classify_bien_trend(cls, the_elem: str, bien_the_elem: str) -> str:
         if cls.NGU_HANH_SINH.get(bien_the_elem) == the_elem:
             return (
-                f"Chuyển sang Quẻ Biến thấy khí của Biến ({bien_the_elem}) sinh trợ cho Thể ({the_elem}), "
-                f"nên xu hướng về sau của dòng tiền có phần được bồi đắp và dịu bớt áp lực hơn so với lúc khởi quẻ."
+                f"Sang Quẻ Biến, khí của quái biến phía Thể ({bien_the_elem}) sinh cho Thể ({the_elem}), "
+                f"cho thấy chiều hướng về sau của dòng tiền có phần được bồi đắp và dịu áp lực hơn lúc khởi quẻ."
             )
         if bien_the_elem == the_elem:
             return (
-                f"Chuyển sang Quẻ Biến thấy hành của Biến ({bien_the_elem}) đồng khí với Thể ({the_elem}), "
-                f"cho thấy chiều hướng về sau giữ nhịp tương đối ổn định, ít đảo chiều đột ngột."
+                f"Sang Quẻ Biến, hành của quái biến phía Thể ({bien_the_elem}) đồng khí với Thể ({the_elem}), "
+                f"cho thấy xu hướng về sau giữ nhịp tương đối ổn định, ít đổi chiều đột ngột."
             )
         if cls.NGU_HANH_KHAC.get(the_elem) == bien_the_elem:
             return (
-                f"Chuyển sang Quẻ Biến thấy Thể ({the_elem}) khắc Biến ({bien_the_elem}), "
-                f"xu hướng sau vẫn nằm trong tầm chi phối của Thể nhưng càng về sau càng dễ hao sức nếu kéo dài."
+                f"Sang Quẻ Biến, Thể ({the_elem}) khắc quái biến ({bien_the_elem}), "
+                f"xu hướng sau vẫn nằm trong tầm chi phối của Thể nhưng càng kéo dài càng dễ tiêu hao khí lực."
             )
         if cls.NGU_HANH_SINH.get(the_elem) == bien_the_elem:
             return (
-                f"Chuyển sang Quẻ Biến thấy Thể ({the_elem}) sinh cho Biến ({bien_the_elem}), "
-                f"cảnh báo xu hướng về sau dễ bị rút bớt khí lực/dòng tiền, không nên kỳ vọng thu hoạch lớn ở chặng cuối."
+                f"Sang Quẻ Biến, Thể ({the_elem}) sinh cho quái biến ({bien_the_elem}), "
+                f"cảnh báo chiều hướng về sau dễ phát sinh tiết khí/hao hụt dòng tiền, không nên dồn kỳ vọng lớn ở chặng sau."
             )
         return (
-            f"Chuyển sang Quẻ Biến thấy Biến ({bien_the_elem}) khắc chế Thể ({the_elem}), "
-            f"báo hiệu về sau dễ gặp trở ngại hoặc biến số bất lợi cho tài lộc; cần giữ chặt vốn từ sớm."
+            f"Sang Quẻ Biến, quái biến ({bien_the_elem}) khắc chế Thể ({the_elem}), "
+            f"báo hiệu xu hướng về sau dễ gặp trở ngại hoặc biến số bất lợi cho tài lộc; cần giữ kỷ luật vốn từ sớm."
         )
 
     @classmethod
@@ -934,46 +953,47 @@ class MaiHoaDichSoCore:
         bien_str = cls._format_quai_pair(thuong_bien_id, ha_bien_id)
 
         hao_note = cls.HAO_TUONG_TAI_LOC[hao_dong]
+        ho_trend_note = cls._classify_ho_trend(thuong_ho_id, ha_ho_id)
+        bien_trend_note = cls._classify_bien_trend(the_info["element"], cls.BAT_QUAI[bien_the_id]["element"])
         the_tuong = cls.QUAI_TUONG_TAI_LOC[the_id]
         dung_tuong = cls.QUAI_TUONG_TAI_LOC[dung_id]
-        bien_trend_note = cls._classify_bien_trend(the_info["element"], cls.BAT_QUAI[bien_the_id]["element"])
 
         if relation == "Dụng sinh Thể":
             zone_label = "🟢 TÀI LỘC THUẬN KHÍ (Dụng sinh Thể) — Ngoại cảnh sinh trợ cho Thể"
             wealth_analysis = (
                 f"Thể là {the_info['name']} ({the_info['element']}), Dụng là {dung_info['name']} ({dung_info['element']}). "
-                f"Xét về tài lộc, 'Dụng sinh Thể' là thế ngoại lực và thời thế đang sinh trợ cho phần Thể, "
-                f"khí tài lộc có đường tiếp ứng nhưng cần biết giữ nhịp và có điểm neo để không tiêu tán vô ích."
+                f"Xét về tài lộc, thế 'Dụng sinh Thể' là ngoại cảnh và thời thế đang sinh trợ cho Thể, "
+                f"dòng khí có đường tiếp ứng nhưng cần có điểm neo và sự tiết chế để không chi tiêu quá tay."
             )
             wealth_advice = (
-                "Thời vận tài lộc lúc này có lực sinh trợ, nhưng chỉ nên đi từng bước có tính toán và đặt rõ hạn mức vốn từ đầu. "
-                "Thấy thuận càng không được mở tay quá trớn hay nâng mức mạo hiểm vượt tầm kiểm soát."
+                "Thời vận tài lộc lúc này có lực sinh trợ, hợp với việc đi từng bước có tính toán và đặt rõ hạn mức vốn từ đầu. "
+                "Thấy thuận càng cần giữ sự tỉnh táo, không mở rộng mức mạo hiểm vượt tầm kiểm soát."
             )
         elif relation == "Thể Dụng tỷ hòa":
             zone_label = "🟢 TÀI LỘC TỶ HÒA (Thể Dụng đồng hành) — Nội lực và ngoại cảnh ngang sức"
             wealth_analysis = (
-                f"Thể ({the_info['name']}, hành {the_info['element']}) và Dụng ({dung_info['name']}, hành {dung_info['element']}) cùng hành tương trợ. "
-                f"Xét về tài lộc, thế 'Tỷ hòa' cho thấy sức của Thể và lực bên ngoài cân bằng, dòng tiền ít bị chèn ép đột ngột nhưng cũng khó bật mạnh nếu thiếu yếu tố thúc đẩy."
+                f"Thể ({the_info['name']}, hành {the_info['element']}) và Dụng ({dung_info['name']}, hành {dung_info['element']}) cùng hành tương đồng. "
+                f"Xét về tài lộc, thế 'Tỷ hòa' cho thấy nội lực của Thể và ngoại cảnh cân bằng, ít bị chèn ép đột ngột nhưng cũng khó bứt phá mạnh nếu thiếu đòn bẩy."
             )
             wealth_advice = (
-                "Dòng tiền lúc này ở thế quân bình, hợp giữ nhịp đều và quan sát hơn là dồn vốn đánh lớn. "
-                "Cứ đúng phần ngân sách đã định mà làm, tránh chạy theo tâm lý đám đông."
+                "Dòng tiền lúc này ở thế quân bình, hợp giữ nhịp ổn định và quan sát hơn là dồn vốn đánh lớn. "
+                "Cứ bám đúng phần ngân sách đã định mà làm, tránh chạy theo tâm lý đám đông."
             )
         elif relation == "Thể khắc Dụng":
             zone_label = "🟡 TÀI LỘC CHỦ ĐỘNG CÓ HAO LỰC (Thể khắc Dụng) — Chế ngự được nhưng tiêu hao sức lực"
             wealth_analysis = (
                 f"Thể ({the_info['name']}, hành {the_info['element']}) khắc chế Dụng ({dung_info['name']}, hành {dung_info['element']}). "
-                f"Xét về tài lộc, 'Thể khắc Dụng' là thế Thể chủ động chi phối cơ hội, nhưng 'khắc xuất' thì có hao tổn khí lực, công sức hoặc chi phí để giành phần hơn."
+                f"Xét về tài lộc, thế 'Thể khắc Dụng' là Thể nắm phần chủ động chi phối, nhưng 'khắc xuất' tất có hao tổn khí lực, công sức hoặc chi phí để giành phần hơn."
             )
             wealth_advice = (
-                "Có thể nắm thế chủ động nhưng phải đánh đổi bằng sức lực và sự tỉnh táo. "
-                "Nếu tham gia tài chính chỉ nên giữ ở mức nhỏ gọn, có điểm dừng rõ ràng, không kéo dài sa đà."
+                "Có thể giữ thế chủ động nhưng phải đánh đổi bằng sức lực và sự tập trung. "
+                "Nếu tham gia tài chính chỉ nên giữ ở mức nhỏ gọn, có điểm dừng rõ ràng, tránh sa đà kéo dài."
             )
         elif relation == "Thể sinh Dụng":
             zone_label = "🟡 TÀI LỘC TIẾT KHÍ (Thể sinh Dụng) — Nội lực sinh xuất cho Dụng"
             wealth_analysis = (
                 f"Thể ({the_info['name']}, hành {the_info['element']}) sinh cho Dụng ({dung_info['name']}, hành {dung_info['element']}). "
-                f"Xét về tài lộc, đây là thế 'Thể sinh Dụng' (sinh xuất/tiết khí): phần Thể dồn lực nuôi bên ngoài nên dễ hao hụt nội lực, làm nhiều hoặc chi nhiều mà lực thu về chưa tương xứng."
+                f"Xét về tài lộc, đây là thế 'Thể sinh Dụng' (sinh xuất/tiết khí): phần Thể dồn khí nuôi bên ngoài nên dễ giảm nội lực, làm nhiều hoặc chi nhiều mà lực thu về chưa tương xứng."
             )
             wealth_advice = (
                 "Lực tài chính lúc này đang có xu hướng sinh xuất ra bên ngoài, không phải lúc mở rộng chi tiêu hay mạo hiểm. "
@@ -983,19 +1003,25 @@ class MaiHoaDichSoCore:
             zone_label = "🔴 TÀI LỘC GẶP NGHỊCH KHÍ (Dụng khắc Thể) — Ngoại lực khắc chế Thể"
             wealth_analysis = (
                 f"Dụng ({dung_info['name']}, hành {dung_info['element']}) khắc chế Thể ({the_info['name']}, hành {the_info['element']}). "
-                f"Xét về tài lộc, 'Dụng khắc Thể' là thế ngoại cảnh và biến số bên ngoài gây áp lực lên Thể, dễ phát sinh trắc trở, hao hụt hoặc quyết định vội vàng dẫn tới bất lợi cho túi tiền."
+                f"Xét về tài lộc, thế 'Dụng khắc Thể' là ngoại cảnh và biến số bên ngoài gây áp lực lên Thể, dễ phát sinh trở ngại hoặc quyết định vội vàng dẫn tới bất lợi cho túi tiền."
             )
             wealth_advice = (
                 "Thời vận tài lộc lúc này đang chịu nghịch lực, càng cố ép càng dễ vướng tổn thất. "
                 "Ưu tiên hàng đầu là giữ chặt nguồn vốn, khoanh vùng rủi ro và đứng ngoài các nhịp mạo hiểm."
             )
 
+        method_note = (
+            "Ghi chú phương pháp: Quẻ khởi theo thời điểm động tâm (Âm lịch + Giờ Chi; số năm quy ước theo thứ tự Địa chi 1..12), "
+            "luận chuyên biệt dưới góc độ tài lộc, dòng tiền và kỷ luật quản trị vốn."
+        )
+
         scholar_commentary = (
             f"Quẻ Chủ lập được {chu_str}, động tại {hao_note} "
-            f"Diễn biến ngầm bên trong kết thành Hỗ quái {ho_str}, rồi chuyển sang Quẻ Biến {bien_str} để mở ra xu hướng kế tiếp. "
-            f"{bien_trend_note} "
             f"{wealth_analysis} "
-            f"Xét riêng về tượng tài lộc: phía Thể mang {the_tuong}, còn phía Dụng mang {dung_tuong}."
+            f"Xét tượng quẻ dưới góc độ tài lộc: phía Thể mang {the_tuong}, còn phía Dụng mang {dung_tuong}. "
+            f"Diễn biến bên trong kết thành Hỗ quái {ho_str}: {ho_trend_note} "
+            f"Sau đó chuyển sang Quẻ Biến {bien_str}: {bien_trend_note} "
+            f"{method_note}"
         )
 
         return {
