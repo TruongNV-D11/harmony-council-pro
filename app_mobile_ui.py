@@ -7,7 +7,8 @@ import math
 import time
 import requests
 from datetime import datetime, date, timedelta, timezone
-from typing import Dict, List, Tuple, Any
+import logging
+from typing import Dict, List, Optional, Tuple, Any
 
 # =====================================================================
 # 🏛️ 1. CẤU HÌNH GIAO DIỆN DI ĐỘNG & THƯỢNG LƯU (DARK THEME)
@@ -156,15 +157,38 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-# 🌐 2. KHO DỮ LIỆU THẬT 3 TẦNG: GITHUB SEED + LIVE WEB + SMART CACHE
+# 🌐 2. KHO DỮ LIỆU THẬT 3 TẦNG: VIETLOTTLIVE + MINH NGỌC + GITHUB SEED + SMART CACHE
+# =====================================================================
+# =====================================================================
+# 1. CẤU HÌNH MÚI GIỜ, CACHE & LOGGING
 # =====================================================================
 VN_TZ = timezone(timedelta(hours=7))
-def now_vn():
+
+
+def now_vn() -> datetime:
     return datetime.now(VN_TZ)
+
 
 BASE_DIR = os.path.expanduser("~/.vietlott_predictor")
 CACHE_DIR = os.path.join(BASE_DIR, "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
+
+LOG_PATH = os.path.join(BASE_DIR, "fetchdata_test.log")
+logger = logging.getLogger("VietlottFetchData")
+if not logger.handlers:
+    logger.setLevel(logging.DEBUG)
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.WARNING)
+    fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+    sh.setFormatter(fmt)
+    logger.addHandler(sh)
+    try:
+        fh = logging.FileHandler(LOG_PATH, encoding="utf-8")
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(fmt)
+        logger.addHandler(fh)
+    except Exception:
+        pass
 
 DEFAULT_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
@@ -173,19 +197,21 @@ DEFAULT_HEADERS = {
     "Referer": "https://www.google.com/",
 }
 
-GAMES = {
+GAMES: Dict[str, Dict[str, Any]] = {
     "5x35": {
         "id": "5x35",
         "label": "Lotto 5/35 (2 phiên/ngày: 13h & 21h)",
-        "pick": 5, "max_main": 35,
-        "has_special": True, "special_max": 12,
+        "pick": 5,
+        "max_main": 35,
+        "has_special": True,
+        "special_max": 12,
         "draw_type": "daily_twice",
-        "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
+        "url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
         "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
+        "minhngoc_url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
         "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power535.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/5-35.html",
-            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
             "https://xoso.me/ket-qua/5-35.html",
             "https://ketqua.net/xo-so-vietlott-5-35",
             "https://www.kqxs.vn/xo-so-vietlott-5-35",
@@ -194,16 +220,17 @@ GAMES = {
     "6x45": {
         "id": "6x45",
         "label": "Mega 6/45 (Thứ 4, 6, CN - 18h)",
-        "pick": 6, "max_main": 45,
+        "pick": 6,
+        "max_main": 45,
         "has_special": False,
         "draw_days": [2, 4, 6],
         "draw_type": "weekly",
-        "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/mega-645.html",
+        "url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
         "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
+        "minhngoc_url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/mega-645.html",
         "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power645.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/mega-645.html",
-            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
             "https://xoso.me/ket-qua/mega-6-45.html",
             "https://ketqua.net/xo-so-vietlott-mega-6-45",
         ],
@@ -211,34 +238,103 @@ GAMES = {
     "6x55": {
         "id": "6x55",
         "label": "Power 6/55 (Thứ 3, 5, 7 - 18h)",
-        "pick": 6, "max_main": 55,
+        "pick": 6,
+        "max_main": 55,
         "has_special": False,
         "draw_days": [1, 3, 5],
         "draw_type": "weekly",
-        "url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/power-655.html",
+        "url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
         "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
+        "minhngoc_url": "https://www.minhngoc.net/ket-qua-xo-so/vietlott/power-655.html",
         "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power655.jsonl",
         "backups": [
             "https://www.minhngoc.net/ket-qua-xo-so/vietlott/power-655.html",
-            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
             "https://xoso.me/ket-qua/power-6-55.html",
             "https://ketqua.net/xo-so-vietlott-power-6-55",
         ],
     },
 }
 
-def get_latest_expected_draw_date(game_key: str) -> date:
+MAX_CACHE_RECORDS = 2000
+
+
+# =====================================================================
+# 2. TÍNH TOÁN LỊCH QUAY THƯỞNG & ĐỐI CHIẾU KỲ QUAY
+# =====================================================================
+def _parse_any_date(val: Any) -> Optional[date]:
+    s = str(val or "").strip()
+    if not s:
+        return None
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y/%m/%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(s[:10], fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def get_latest_expected_draw_slot(game_key: str) -> Tuple[date, str]:
     game_cfg = GAMES.get(game_key, GAMES["6x45"])
     now = now_vn()
     current_date = now.date()
     if game_cfg.get("draw_type") == "daily_twice":
-        return current_date if now.hour >= 13 else current_date - timedelta(days=1)
-    valid_days = game_cfg["draw_days"]
-    for i in range(7):
-        check_date = current_date - timedelta(days=i)
+        if now.hour >= 21:
+            return current_date, "21:00"
+        elif now.hour >= 13:
+            return current_date, "13:00"
+        return current_date - timedelta(days=1), "21:00"
+    valid_days = set(game_cfg.get("draw_days") or [])
+    for offset in range(0, 8):
+        check_date = current_date - timedelta(days=offset)
         if check_date.weekday() in valid_days:
-            return check_date
-    return current_date
+            if offset == 0 and now.hour < 18:
+                continue
+            return check_date, "18:00"
+    return current_date, "18:00"
+
+
+def get_latest_expected_draw_date(game_key: str) -> date:
+    d, _ = get_latest_expected_draw_slot(game_key)
+    return d
+
+
+def is_valid_draw_date_for_game(dt_val: Any, game_key: str, max_date: Optional[date] = None) -> bool:
+    """Kiểm tra ngày có khớp đúng lịch quay hợp lệ của game (không vượt quá max_date)."""
+    d = _parse_any_date(dt_val)
+    if d is None:
+        return False
+    ref_max = max_date or get_latest_expected_draw_date(game_key)
+    if d > ref_max:
+        return False
+    game_cfg = GAMES.get(game_key, GAMES["6x45"])
+    if game_cfg.get("draw_type") == "daily_twice":
+        return True
+    valid_days = set(game_cfg.get("draw_days") or [])
+    return d.weekday() in valid_days if valid_days else True
+
+
+def resolve_record_draw_slot(rec: Dict[str, Any], game_key: str, fallback_slot_dt: Tuple[date, str]) -> Tuple[date, str]:
+    """Xác định (draw_date, draw_slot) chuẩn xác cho bản ghi theo đúng lịch quay của game."""
+    game_cfg = GAMES.get(game_key, GAMES["6x45"])
+    exp_date, exp_slot = fallback_slot_dt
+    parsed_dt = _parse_any_date(rec.get("date"))
+    raw_slot = str(rec.get("slot", "") or "").strip()
+
+    if game_cfg.get("draw_type") == "daily_twice":
+        target_d = parsed_dt if (parsed_dt is not None and parsed_dt <= exp_date) else exp_date
+        if raw_slot in ("13:00", "21:00"):
+            target_s = raw_slot
+        elif target_d == exp_date:
+            target_s = exp_slot
+        else:
+            target_s = "21:00"
+        return target_d, target_s
+
+    valid_days = set(game_cfg.get("draw_days") or [])
+    if parsed_dt is not None and parsed_dt <= exp_date and (not valid_days or parsed_dt.weekday() in valid_days):
+        return parsed_dt, "18:00"
+    return exp_date, "18:00"
+
 
 def get_next_draw_datetime(game_key: str) -> datetime:
     game_cfg = GAMES.get(game_key, GAMES["6x45"])
@@ -259,14 +355,24 @@ def get_next_draw_datetime(game_key: str) -> datetime:
             return datetime.combine(check_date, datetime.min.time()).replace(hour=18, minute=0, tzinfo=VN_TZ)
     return now
 
-def fetch_github_seed_data(github_url: str, game_cfg: dict) -> List[Dict[str, Any]]:
+
+# =====================================================================
+# 3. FETCH DỮ LIỆU TỪ GITHUB SEED & LIVE WEB (CÓ DIAGNOSTIC LOG)
+# =====================================================================
+def fetch_github_seed_data(github_url: str, game_cfg: dict, diag: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """Tải dữ liệu nền dài kỳ từ kho vietvudanh/vietlott-data (định dạng JSONL)."""
     if not github_url:
         return []
-    records = []
+    records: List[Dict[str, Any]] = []
     try:
+        t0 = time.time()
         resp = requests.get(github_url, headers=DEFAULT_HEADERS, timeout=12)
+        elapsed = round(time.time() - t0, 2)
+        if diag is not None:
+            diag["github_status"] = resp.status_code
+            diag["github_elapsed_s"] = elapsed
         if resp.status_code != 200:
+            logger.warning(f"[GitHub] HTTP {resp.status_code} ({elapsed}s) -> {github_url}")
             return []
         pick_n = game_cfg["pick"]
         max_m = game_cfg["max_main"]
@@ -279,7 +385,7 @@ def fetch_github_seed_data(github_url: str, game_cfg: dict) -> List[Dict[str, An
             valid = [int(x) for x in raw_nums if 1 <= int(x) <= max_m]
             if len(valid) >= pick_n:
                 mains = sorted(valid[:pick_n])
-                entry = {
+                entry: Dict[str, Any] = {
                     "draw": obj.get("id") or obj.get("draw_id") or 0,
                     "date": obj.get("date", ""),
                     "mains": mains,
@@ -288,25 +394,39 @@ def fetch_github_seed_data(github_url: str, game_cfg: dict) -> List[Dict[str, An
                     entry["special"] = valid[pick_n]
                 records.append(entry)
         records.sort(key=lambda x: str(x.get("date", "")), reverse=True)
-    except Exception:
-        pass
+        logger.info(f"[GitHub] OK ({elapsed}s) -> {len(records)} kỳ từ {github_url}")
+    except Exception as e:
+        if diag is not None:
+            diag["github_error"] = repr(e)
+        logger.error(f"[GitHub] Lỗi {github_url}: {e}")
     return records
 
-def fetch_html(url: str, timeout: int = 8) -> str:
-    """Lấy HTML trực tiếp tương tự cơ chế của v1.7.1-Final."""
+
+def fetch_html_with_diag(url: str, timeout: int = 12) -> Tuple[str, Dict[str, Any]]:
+    """Lấy HTML trực tiếp kèm thông tin chẩn đoán HTTP status, độ dài và lỗi."""
+    info: Dict[str, Any] = {"url": url, "status": None, "bytes": 0, "elapsed_s": 0.0, "error": ""}
+    t0 = time.time()
     try:
         resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=timeout)
+        info["elapsed_s"] = round(time.time() - t0, 2)
+        info["status"] = resp.status_code
+        info["bytes"] = len(resp.text or "")
         if resp.status_code == 200 and resp.text:
-            return resp.text
-    except Exception:
-        pass
-    return ""
+            return resp.text, info
+        info["error"] = f"HTTP_{resp.status_code}"
+    except Exception as e:
+        info["elapsed_s"] = round(time.time() - t0, 2)
+        info["error"] = f"{type(e).__name__}: {e}"
+    return "", info
 
-def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
-    """
-    Parser chuyên biệt cho nguồn vietlott.vn: bóc các dòng/khối kết quả và ngày kỳ quay
-    (nếu có) rồi chuẩn hóa về bản ghi thống nhất {"draw", "date", "mains", "special"?}.
-    """
+
+def fetch_html(url: str, timeout: int = 12) -> str:
+    html, _ = fetch_html_with_diag(url, timeout=timeout)
+    return html
+
+
+def _extract_ball_records(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
+    """Bóc các cụm thẻ bóng/số liền kề trong bảng kết quả HTML."""
     records: List[Dict[str, Any]] = []
     if not html:
         return records
@@ -316,19 +436,19 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     has_spec = game_cfg.get("has_special", False)
     spec_max = game_cfg.get("special_max", 12)
 
-    clean_text = re.sub(r"<(script|style)[^>]*>.*?</>", " ", html, flags=re.IGNORECASE | re.DOTALL)
-    dates_found = re.findall(r"(\d{2}/\d{2}/\d{4})", clean_text)
+    clean_text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    dates_found = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", clean_text)
 
     ball_blocks = re.findall(
         r"(?:<(?:span|li|td|div|b|strong)[^>]*>\s*\d{1,2}\s*</(?:span|li|td|div|b|strong)>\s*){" + str(pick_n) + r",8}",
         clean_text,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     draw_id = 9999
     for idx, grp in enumerate(ball_blocks):
         raw_nums = [int(x) for x in re.findall(r">\s*(\d{1,2})\s*<", grp)]
-        mains_raw = []
+        mains_raw: List[int] = []
         for n in raw_nums:
             if 1 <= n <= max_m and n not in mains_raw:
                 mains_raw.append(n)
@@ -348,11 +468,24 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
             records.append(entry)
             draw_id -= 1
 
+    return records
+
+
+def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
+    """Parser chuyên biệt cho nguồn vietlott.vn."""
+    records = _extract_ball_records(html, game_cfg)
     if records:
         return records
+    if not html:
+        return []
 
-    all_nums = [int(x) for x in re.findall(r"\d{1,2}", re.sub(r"<[^>]+>", " ", clean_text))]
+    pick_n = game_cfg["pick"]
+    max_m = game_cfg["max_main"]
+    clean_text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    dates_found = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", clean_text)
+    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", re.sub(r"<[^>]+>", " ", clean_text))]
     valid_nums = [n for n in all_nums if 1 <= n <= max_m]
+    draw_id = 9999
     for i in range(0, len(valid_nums), pick_n):
         seg = valid_nums[i : i + pick_n]
         if len(seg) == pick_n:
@@ -362,26 +495,37 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
                 "mains": sorted(seg),
             })
             draw_id -= 1
-
     return records
 
+
+def parse_minhngoc_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
+    """Parser chuyên biệt cho nguồn ưu tiên thứ 2: minhngoc.net."""
+    return _extract_ball_records(html, game_cfg)
+
+
 def parse_history_from_html(html: str, game_cfg: dict, source_url: str = "") -> List[Dict[str, Any]]:
-    """
-    Điều phối parser theo nguồn web trực tiếp (hỗ trợ riêng vietlott.vn và chuẩn v1.7.1-Final).
-    """
+    """Điều phối parser theo nguồn web trực tiếp (vietlott.vn -> minhngoc.net -> chung)."""
     if not html:
         return []
 
-    if "vietlott.vn" in (source_url or "").lower():
+    src_lower = (source_url or "").lower()
+    if "vietlott.vn" in src_lower:
         vn_parsed = parse_vietlott_vn_html(html, game_cfg)
         if vn_parsed:
             return vn_parsed
+
+    if "minhngoc.net" in src_lower:
+        mn_parsed = parse_minhngoc_html(html, game_cfg)
+        if mn_parsed:
+            return mn_parsed
 
     history: List[Dict[str, Any]] = []
     pick_n = game_cfg["pick"]
     max_m = game_cfg["max_main"]
 
-    all_nums = [int(x) for x in re.findall(r"\d{1,2}", html)]
+    clean_html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    text_only = re.sub(r"<[^>]+>", " ", clean_html)
+    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", text_only)]
     valid_nums = [n for n in all_nums if 1 <= n <= max_m]
 
     draw_id = 9999
@@ -396,10 +540,11 @@ def parse_history_from_html(html: str, game_cfg: dict, source_url: str = "") -> 
 
     return history
 
-MAX_CACHE_RECORDS = 2000
 
+# =====================================================================
+# 4. VALIDATION GATE, CHUẨN HÓA KỲ QUAY & SMART CACHE
+# =====================================================================
 def is_valid_record(rec: Any, game_cfg: dict) -> bool:
-    """Validation Gate: kiểm tra định dạng bản ghi trước khi nạp hoặc lưu cache."""
     if not isinstance(rec, dict):
         return False
     pick_n = game_cfg["pick"]
@@ -418,19 +563,41 @@ def is_valid_record(rec: Any, game_cfg: dict) -> bool:
             return False
     return True
 
-def _normalize_record(rec: Dict[str, Any], game_cfg: dict) -> Dict[str, Any]:
-    """Chuẩn hóa bản ghi về schema thống nhất trước khi lưu."""
+
+def _normalize_record(
+    rec: Dict[str, Any],
+    game_cfg: dict,
+    fallback_date: str = "",
+    fallback_slot: str = "",
+    game_key: Optional[str] = None,
+) -> Dict[str, Any]:
+    g_key = game_key or str(game_cfg.get("id") or "6x45")
+    exp_date, exp_slot = get_latest_expected_draw_slot(g_key)
+    fb_dt = _parse_any_date(fallback_date) or exp_date
+    fb_sl = str(fallback_slot or exp_slot or "").strip()
+
+    resolved_d, resolved_s = resolve_record_draw_slot(
+        {
+            "date": rec.get("date") or fb_dt.strftime("%Y-%m-%d"),
+            "slot": rec.get("slot") or fb_sl,
+        },
+        g_key,
+        (fb_dt, fb_sl),
+    )
+
     out: Dict[str, Any] = {
         "draw": rec.get("draw", 0),
-        "date": str(rec.get("date", "") or "").strip(),
+        "date": resolved_d.strftime("%Y-%m-%d"),
         "mains": sorted(int(x) for x in rec["mains"]),
     }
+    if resolved_s:
+        out["slot"] = resolved_s
     if game_cfg.get("has_special") and rec.get("special") is not None:
         out["special"] = int(rec["special"])
     return out
 
+
 def _atomic_write_json(target_path: str, payload: Any) -> bool:
-    """Ghi file JSON nguyên tử (tmp + flush + fsync + os.replace) chống hỏng file cache."""
     tmp_path = f"{target_path}.tmp"
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
@@ -447,42 +614,72 @@ def _atomic_write_json(target_path: str, payload: Any) -> bool:
             pass
         return False
 
+
 def _merge_unique_history(
     primary: List[Dict[str, Any]],
     secondary: List[Dict[str, Any]],
     game_cfg: dict,
-    max_records: int = MAX_CACHE_RECORDS
+    max_records: int = MAX_CACHE_RECORDS,
+    game_key: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Lọc hợp lệ, khử trùng lặp và giới hạn trần lưu trữ tối đa max_records kỳ."""
     merged: List[Dict[str, Any]] = []
-    seen = set()
+    seen_exact = set()
+    seen_numbers_only = set()
     for item in primary + secondary:
         if not is_valid_record(item, game_cfg):
             continue
-        clean_item = _normalize_record(item, game_cfg)
+        clean_item = _normalize_record(item, game_cfg, game_key=game_key)
         date_key = clean_item["date"]
-        key = (date_key, tuple(clean_item["mains"]), clean_item.get("special")) if date_key else (tuple(clean_item["mains"]), clean_item.get("special"))
-        if key not in seen:
-            seen.add(key)
-            merged.append(clean_item)
-            if len(merged) >= max_records:
-                break
-    return merged
+        slot_key = clean_item.get("slot", "")
+        mains_tup = tuple(clean_item["mains"])
+        spec_val = clean_item.get("special")
+        num_key = (mains_tup, spec_val)
+        exact_key = (date_key, slot_key, mains_tup, spec_val) if date_key else num_key
 
-def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str, float]:
-    """
-    Ưu tiên tuyệt đối FetchData trực tiếp (Live Web) để lấy kết quả gần nhất.
-    - Mọi bản ghi qua Validation Gate is_valid_record().
-    - Smart Cache tích lũy tối đa 2.000 kỳ thật, ghi nguyên tử bằng Atomic Write.
-    - GitHub Backup chỉ gọi khi FetchData trực tiếp lỗi hoặc thiếu số kỳ cần thiết.
-    """
+        if exact_key in seen_exact:
+            continue
+        if num_key in seen_numbers_only:
+            continue
+
+        seen_exact.add(exact_key)
+        seen_numbers_only.add(num_key)
+        merged.append(clean_item)
+        if len(merged) >= max_records:
+            break
+    merged.sort(
+        key=lambda r: (
+            str(r.get("date", "")),
+            str(r.get("slot", "00:00")),
+        ),
+        reverse=True,
+    )
+    return merged[:max_records]
+
+
+def get_history_with_diag(
+    game_key: str,
+    sample_k: int = 100,
+    force_refresh: bool = False,
+) -> Tuple[List[Dict[str, Any]], str, float, Dict[str, Any]]:
+    """Phiên bản get_history trả kèm báo cáo chẩn đoán chi tiết từng bước."""
+    expected_slot_date, expected_slot_time = get_latest_expected_draw_slot(game_key)
+    diag: Dict[str, Any] = {
+        "game": game_key,
+        "expected_latest_date": str(expected_slot_date),
+        "expected_latest_slot": expected_slot_time,
+        "cache_used": False,
+        "live_attempts": [],
+        "live_valid_count": 0,
+        "github_valid_count": 0,
+        "final_count": 0,
+    }
+
     game_cfg = GAMES.get(game_key)
     if not game_cfg:
-        return [], "Game không tồn tại", 0.0
+        return [], "Game không tồn tại", 0.0, diag
 
     cache_file = os.path.join(CACHE_DIR, f"history_{game_key}.json")
     meta_file = os.path.join(CACHE_DIR, f"meta_{game_key}.json")
-    expected_latest_date = get_latest_expected_draw_date(game_key)
 
     existing_cache: List[Dict[str, Any]] = []
     cache_age = 0.0
@@ -495,7 +692,7 @@ def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False)
                 raw_cache = json.load(f)
             if isinstance(raw_cache, list):
                 existing_cache = [
-                    _normalize_record(r, game_cfg)
+                    _normalize_record(r, game_cfg, game_key=game_key)
                     for r in raw_cache
                     if is_valid_record(r, game_cfg)
                 ][:MAX_CACHE_RECORDS]
@@ -503,52 +700,88 @@ def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False)
                 with open(meta_file, "r", encoding="utf-8") as f:
                     meta = json.load(f)
                     cached_date = datetime.strptime(meta.get("latest_date", "2000-01-01"), "%Y-%m-%d").date()
-                    if len(existing_cache) >= sample_k and cached_date >= expected_latest_date:
+                    cached_slot = str(meta.get("latest_slot", "") or "")
+                    slot_ok = (cached_date > expected_slot_date) or (
+                        cached_date == expected_slot_date
+                        and (game_cfg.get("draw_type") != "daily_twice" or cached_slot == expected_slot_time)
+                    )
+                    if len(existing_cache) >= sample_k and slot_ok:
                         cache_is_fresh = True
         except Exception:
             existing_cache = []
 
     if cache_is_fresh:
-        return existing_cache[:sample_k], f"📁 Smart Cache Mới nhất ({len(existing_cache)} kỳ thật)", cache_age
+        diag["cache_used"] = True
+        diag["final_count"] = len(existing_cache[:sample_k])
+        return existing_cache[:sample_k], f"📁 Smart Cache Mới nhất ({len(existing_cache)} kỳ thật)", cache_age, diag
 
+    # Bước 1: Live Web (ưu tiên vietlott.vn -> minhngoc.net -> các nguồn dự phòng khác)
     live_fetched: List[Dict[str, Any]] = []
     active_source_url = ""
-    urls = [game_cfg.get("url")] + game_cfg.get("backups", [])
-    for url in dict.fromkeys(u for u in urls if u):
-        html = fetch_html(url)
-        parsed = [
-            _normalize_record(r, game_cfg)
-            for r in parse_history_from_html(html, game_cfg, source_url=url)
+    ordered_urls = [
+        game_cfg.get("vietlott_url"),
+        game_cfg.get("minhngoc_url"),
+        game_cfg.get("url"),
+    ] + game_cfg.get("backups", [])
+    for url in dict.fromkeys(u for u in ordered_urls if u):
+        html, attempt_info = fetch_html_with_diag(url)
+        raw_parsed = parse_history_from_html(html, game_cfg, source_url=url)
+        valid_parsed = [
+            _normalize_record(
+                r,
+                game_cfg,
+                fallback_date=expected_slot_date.strftime("%Y-%m-%d") if idx == 0 else "",
+                fallback_slot=expected_slot_time if idx == 0 else "",
+                game_key=game_key,
+            )
+            for idx, r in enumerate(raw_parsed)
             if is_valid_record(r, game_cfg)
         ]
-        if len(parsed) >= 1:
-            live_fetched = parsed
+        attempt_info["raw_parsed"] = len(raw_parsed)
+        attempt_info["valid_parsed"] = len(valid_parsed)
+        diag["live_attempts"].append(attempt_info)
+        logger.info(
+            f"[{game_key}] Live {url} -> status={attempt_info['status']}, "
+            f"bytes={attempt_info['bytes']}, raw={len(raw_parsed)}, valid={len(valid_parsed)}, err={attempt_info['error']}"
+        )
+        if len(valid_parsed) >= 1:
+            live_fetched = valid_parsed
             active_source_url = url.split("/")[2]
             break
 
+    diag["live_valid_count"] = len(live_fetched)
+
+    # Bước 2: GitHub Seed Backup
     github_seed: List[Dict[str, Any]] = []
     current_pool_len = len(live_fetched) + len(existing_cache)
     if (not live_fetched or current_pool_len < sample_k) and game_cfg.get("github_jsonl"):
         github_seed = [
-            _normalize_record(r, game_cfg)
-            for r in fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg)
+            _normalize_record(r, game_cfg, game_key=game_key)
+            for r in fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg, diag=diag)
             if is_valid_record(r, game_cfg)
         ]
+    diag["github_valid_count"] = len(github_seed)
 
+    # Bước 3: Hợp nhất
     combined = _merge_unique_history(
         live_fetched,
-        _merge_unique_history(existing_cache, github_seed, game_cfg, MAX_CACHE_RECORDS),
+        _merge_unique_history(existing_cache, github_seed, game_cfg, MAX_CACHE_RECORDS, game_key=game_key),
         game_cfg,
         MAX_CACHE_RECORDS,
+        game_key=game_key,
     )
+    diag["final_count"] = len(combined)
 
     if combined:
         _atomic_write_json(cache_file, combined)
-        if live_fetched:
+        newest_rec_date = str(combined[0].get("date", "") or "")
+        if live_fetched or newest_rec_date >= expected_slot_date.strftime("%Y-%m-%d"):
             _atomic_write_json(
                 meta_file,
                 {
-                    "latest_date": expected_latest_date.strftime("%Y-%m-%d"),
+                    "latest_date": expected_slot_date.strftime("%Y-%m-%d"),
+                    "latest_slot": expected_slot_time,
+                    "source_latest_date": newest_rec_date,
                     "record_count": len(combined),
                     "updated_at": now_vn().strftime("%Y-%m-%d %H:%M:%S"),
                 },
@@ -564,9 +797,15 @@ def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False)
         else:
             status = f"🛡️ FetchData lỗi -> Smart Cache Dự phòng ({len(combined)} kỳ thật)"
 
-        return combined[:sample_k], status, cache_age
+        return combined[:sample_k], status, cache_age, diag
 
-    return [], "⚠️ FetchData trực tiếp thất bại và không có dữ liệu Cache/Backup khả dụng", 0.0
+    return [], "⚠️ FetchData trực tiếp thất bại và không có dữ liệu Cache/Backup khả dụng", 0.0, diag
+
+
+def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False) -> Tuple[List[Dict[str, Any]], str, float]:
+    """Hàm chuẩn giữ nguyên chữ ký (records, status, cache_age) để cắm thẳng vào app."""
+    records, status, cache_age, _ = get_history_with_diag(game_key, sample_k=sample_k, force_refresh=force_refresh)
+    return records, status, cache_age
 
 
 # =====================================================================
