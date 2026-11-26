@@ -713,6 +713,7 @@ def get_history_with_diag(
     if cache_is_fresh:
         diag["cache_used"] = True
         diag["final_count"] = len(existing_cache[:sample_k])
+        _atomic_write_json(os.path.join(BASE_DIR, f"last_fetch_diag_{game_key}.json"), diag)
         return existing_cache[:sample_k], f"📁 Smart Cache Mới nhất ({len(existing_cache)} kỳ thật)", cache_age, diag
 
     # Bước 1: Live Web (ưu tiên vietlott.vn -> minhngoc.net -> các nguồn dự phòng khác)
@@ -797,8 +798,10 @@ def get_history_with_diag(
         else:
             status = f"🛡️ FetchData lỗi -> Smart Cache Dự phòng ({len(combined)} kỳ thật)"
 
+        _atomic_write_json(os.path.join(BASE_DIR, f"last_fetch_diag_{game_key}.json"), diag)
         return combined[:sample_k], status, cache_age, diag
 
+    _atomic_write_json(os.path.join(BASE_DIR, f"last_fetch_diag_{game_key}.json"), diag)
     return [], "⚠️ FetchData trực tiếp thất bại và không có dữ liệu Cache/Backup khả dụng", 0.0, diag
 
 
@@ -1691,9 +1694,10 @@ if run_clicked:
 
     status_text.text("🔄 Đang chạy FetchData trực tiếp lấy kết quả gần nhất (kích hoạt Backup nếu lỗi)...")
     progress_bar.progress(25)
-    history_data, data_source_status, cache_age_sec = get_history(
+    history_data, data_source_status, cache_age_sec, fetch_diag = get_history_with_diag(
         game_key, sample_k=horizon_samples, force_refresh=force_refresh_data
     )
+    st.session_state["last_fetch_diag"] = fetch_diag
 
     status_text.text("🏛️ Thẩm định Đông phương & Ma trận Chiêm tinh Phương Tây 3 Tầng...")
     progress_bar.progress(60)
@@ -1984,6 +1988,40 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
 
                 except Exception as e:
                     st.error(f"Lỗi hệ thống kết nối AI: {e}")
+
+# =====================================================================
+# 🔧 9B. CHẨN ĐOÁN NGUỒN FETCHDATA (CHẾ ĐỘ QUẢN TRỊ VIÊN ẨN: ?admin=1)
+# =====================================================================
+def _is_admin_session() -> bool:
+    try:
+        qp = st.query_params
+        admin_param = str(qp.get("admin", "") or "").strip()
+        expected_key = str(st.secrets.get("ADMIN_DIAG_KEY", "1") or "1").strip()
+        return bool(admin_param) and admin_param == expected_key
+    except Exception:
+        return False
+
+
+if _is_admin_session():
+    with st.expander("🛠️ [ADMIN ONLY] Chẩn đoán Nguồn FetchData & Log Hệ thống", expanded=True):
+        st.caption(
+            f"Log chi tiết lưu tại: `{LOG_PATH}` | "
+            f"Snapshot JSON lưu tại: `{os.path.join(BASE_DIR, f'last_fetch_diag_{game_key}.json')}`"
+        )
+        diag_payload = st.session_state.get("last_fetch_diag")
+        if not diag_payload:
+            diag_file = os.path.join(BASE_DIR, f"last_fetch_diag_{game_key}.json")
+            if os.path.exists(diag_file):
+                try:
+                    with open(diag_file, "r", encoding="utf-8") as f:
+                        diag_payload = json.load(f)
+                except Exception:
+                    diag_payload = None
+        if diag_payload:
+            st.json(diag_payload)
+        else:
+            st.info("Chưa có dữ liệu chẩn đoán trong phiên này. Bấm chạy chương trình để ghi nhận.")
+
 
 # =====================================================================
 # 🛡️ 10. CHỮ KÝ SỞ HỮU VÀ BẢN QUYỀN (WATERMARK & BRAND OWNER)
