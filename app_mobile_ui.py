@@ -316,8 +316,8 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     has_spec = game_cfg.get("has_special", False)
     spec_max = game_cfg.get("special_max", 12)
 
-    clean_text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
-    dates_found = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", clean_text)
+    clean_text = re.sub(r"<(script|style)[^>]*>.*?</>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    dates_found = re.findall(r"(\d{2}/\d{2}/\d{4})", clean_text)
 
     ball_blocks = re.findall(
         r"(?:<(?:span|li|td|div|b|strong)[^>]*>\s*\d{1,2}\s*</(?:span|li|td|div|b|strong)>\s*){" + str(pick_n) + r",8}",
@@ -351,7 +351,7 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     if records:
         return records
 
-    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", re.sub(r"<[^>]+>", " ", clean_text))]
+    all_nums = [int(x) for x in re.findall(r"\d{1,2}", re.sub(r"<[^>]+>", " ", clean_text))]
     valid_nums = [n for n in all_nums if 1 <= n <= max_m]
     for i in range(0, len(valid_nums), pick_n):
         seg = valid_nums[i : i + pick_n]
@@ -381,7 +381,7 @@ def parse_history_from_html(html: str, game_cfg: dict, source_url: str = "") -> 
     pick_n = game_cfg["pick"]
     max_m = game_cfg["max_main"]
 
-    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", html)]
+    all_nums = [int(x) for x in re.findall(r"\d{1,2}", html)]
     valid_nums = [n for n in all_nums if 1 <= n <= max_m]
 
     draw_id = 9999
@@ -570,6 +570,112 @@ def get_history(game_key: str, sample_k: int = 100, force_refresh: bool = False)
 
 
 # =====================================================================
+# ☀️ THIÊN VĂN LỊCH PHÁP CHUẨN: GIAO TIẾT LẬP XUÂN (KINH ĐỘ 315°)
+# =====================================================================
+def _jd_from_date(day: int, month: int, year: int) -> int:
+    a = (14 - month) // 12
+    y = year + 4800 - a
+    m = month + 12 * a - 3
+    return day + (153 * m + 2) // 5 + 365 * y + y // 4 - y // 100 + y // 400 - 32045
+
+
+def _jd_from_datetime_utc(dt_utc: datetime) -> float:
+    jd_midnight = _jd_from_date(dt_utc.day, dt_utc.month, dt_utc.year)
+    day_fraction = (
+        (dt_utc.hour - 12) / 24.0
+        + dt_utc.minute / 1440.0
+        + dt_utc.second / 86400.0
+        + dt_utc.microsecond / 86400000000.0
+    )
+    return float(jd_midnight) + day_fraction
+
+
+def _datetime_utc_from_jd(jd: float) -> datetime:
+    jd_shifted = jd + 0.5
+    z = int(math.floor(jd_shifted))
+    f = jd_shifted - z
+
+    if z < 2299161:
+        a = z
+    else:
+        alpha = int(math.floor((z - 1867216.25) / 36524.25))
+        a = z + 1 + alpha - int(math.floor(alpha / 4.0))
+
+    b = a + 1524
+    c = int(math.floor((b - 122.1) / 365.25))
+    d = int(math.floor(365.25 * c))
+    e = int(math.floor((b - d) / 30.6001))
+
+    day = b - d - int(math.floor(30.6001 * e))
+    month = e - 1 if e < 14 else e - 13
+    year = c - 4716 if month > 2 else c - 4715
+
+    total_microseconds = int(round(f * 86400.0 * 1_000_000.0))
+    if total_microseconds >= 86400 * 1_000_000:
+        total_microseconds -= 86400 * 1_000_000
+
+    hour = total_microseconds // 3_600_000_000
+    rem = total_microseconds % 3_600_000_000
+    minute = rem // 60_000_000
+    rem %= 60_000_000
+    second = rem // 1_000_000
+    microsecond = rem % 1_000_000
+
+    return datetime(year, month, day, hour, minute, second, microsecond, tzinfo=timezone.utc)
+
+
+def _normalize_deg(deg: float) -> float:
+    return deg % 360.0
+
+
+def _sun_apparent_longitude_deg(jd: float) -> float:
+    """Kinh độ hoàng đạo biểu kiến của Mặt Trời (độ) tại Julian Day jd (chuỗi chính Jean Meeus)."""
+    t = (jd - 2451545.0) / 36525.0
+    l0 = _normalize_deg(280.46646 + 36000.76983 * t + 0.0003032 * t * t)
+    m = _normalize_deg(357.52911 + 35999.05029 * t - 0.0001537 * t * t)
+    m_rad = math.radians(m)
+
+    eq_center = (
+        (1.914602 - 0.004817 * t - 0.000014 * t * t) * math.sin(m_rad)
+        + (0.019993 - 0.000101 * t) * math.sin(2.0 * m_rad)
+        + 0.000289 * math.sin(3.0 * m_rad)
+    )
+    true_long = _normalize_deg(l0 + eq_center)
+
+    omega = math.radians(125.04 - 1934.136 * t)
+    apparent_long = true_long - 0.00569 - 0.00478 * math.sin(omega)
+    return _normalize_deg(apparent_long)
+
+
+def _signed_angle_diff_deg(current_deg: float, target_deg: float) -> float:
+    """Hiệu góc có dấu trong [-180, 180) để chia đôi chính xác quanh mốc kinh độ target_deg."""
+    return (current_deg - target_deg + 180.0) % 360.0 - 180.0
+
+
+def get_lap_xuan_datetime(year: int, tz_offset_hours: float = 7.0) -> datetime:
+    """
+    Giải phương trình kinh độ hoàng đạo biểu kiến của Mặt Trời = 315° (Tiết Lập Xuân)
+    bằng thuật toán chia đôi (Bisection) trên Julian Day, quy đổi về múi giờ chỉ định.
+    """
+    target_deg = 315.0
+    lo = float(_jd_from_date(1, 2, year)) - 0.5
+    hi = float(_jd_from_date(7, 2, year)) + 0.5
+
+    for _ in range(60):
+        mid = 0.5 * (lo + hi)
+        diff_mid = _signed_angle_diff_deg(_sun_apparent_longitude_deg(mid), target_deg)
+        if diff_mid < 0.0:
+            lo = mid
+        else:
+            hi = mid
+
+    jd_exact = 0.5 * (lo + hi)
+    dt_utc = _datetime_utc_from_jd(jd_exact)
+    tz_info = timezone(timedelta(hours=tz_offset_hours))
+    return dt_utc.astimezone(tz_info)
+
+
+# =====================================================================
 # 📚 3. HỘI ĐỒNG HỌC THUẬT CHUYÊN SÂU: ĐÔNG - TÂY - THỐNG KÊ
 # =====================================================================
 class PhongThuyReferenceCore:
@@ -591,23 +697,15 @@ class PhongThuyReferenceCore:
     ]
 
     @staticmethod
-    def get_solar_term_riping(year: int) -> datetime:
-        try:
-            base_year = 2000
-            base_datetime = datetime(2000, 2, 4, 12, 18)
-            year_diff = year - base_year
-            hours_shift = year_diff * 5.8167 + (year_diff // 4) * 24 - (year_diff // 100) * 24 + (year_diff // 400) * 24
-            lap_xuan_utc = base_datetime + timedelta(hours=hours_shift)
-            lap_xuan_vn = lap_xuan_utc + timedelta(hours=7)
-            safe_day = 4 if lap_xuan_vn.day < 5 else 5
-            return datetime(year, 2, safe_day, lap_xuan_vn.hour, lap_xuan_vn.minute)
-        except Exception:
-            return datetime(year, 2, 4, 12, 0)
+    def get_solar_term_riping(year: int, tz_offset_hours: float = 7.0) -> datetime:
+        """Trả về thời điểm giao tiết Lập Xuân (kinh độ Mặt Trời 315°) theo múi giờ chuẩn."""
+        return get_lap_xuan_datetime(year, tz_offset_hours=tz_offset_hours)
 
     @classmethod
-    def get_lunar_year(cls, y: int, m: int, d: int) -> int:
-        user_datetime = datetime(y, m, d, 12, 0)
-        lap_xuan_time = cls.get_solar_term_riping(y)
+    def get_lunar_year(cls, y: int, m: int, d: int, tz_offset_hours: float = 7.0) -> int:
+        tz_info = timezone(timedelta(hours=tz_offset_hours))
+        user_datetime = datetime(y, m, d, 12, 0, tzinfo=tz_info)
+        lap_xuan_time = cls.get_solar_term_riping(y, tz_offset_hours=tz_offset_hours)
         if user_datetime < lap_xuan_time:
             return y - 1
         return y
@@ -699,13 +797,6 @@ class PhongThuyReferenceCore:
 # =====================================================================
 # 🌸 3B. LÕI CHUYÊN GIA THỜI VẬN TÀI LỘC: MAI HOA DỊCH SỐ
 # =====================================================================
-def _jd_from_date(day: int, month: int, year: int) -> int:
-    a = (14 - month) // 12
-    y = year + 4800 - a
-    m = month + 12 * a - 3
-    return day + (153 * m + 2) // 5 + 365 * y + y // 4 - y // 100 + y // 400 - 32045
-
-
 def _new_moon_jd(k: int, time_zone: float = 7.0) -> int:
     t = k / 1236.85
     t2 = t * t
@@ -1031,8 +1122,8 @@ class MaiHoaDichSoCore:
             )
 
         method_note = (
-            "<b>Ghi chú phương pháp:</b> Quẻ khởi theo thời điểm động tâm (Âm lịch + Giờ Chi; số năm quy ước theo thứ tự Địa chi 1..12), "
-            "luận chuyên biệt dưới góc độ tài lộc, dòng tiền và kỷ luật quản trị vốn."
+            "<b>Ghi chú phương pháp:</b> Quẻ khởi theo thời điểm động tâm (Âm lịch + Giờ Chi; năm Địa Chi tính theo giao tiết Lập Xuân kinh độ Mặt Trời 315°, "
+            "số năm quy ước theo thứ tự Địa chi 1..12), luận chuyên biệt dưới góc độ tài lộc, dòng tiền và kỷ luật quản trị vốn."
         )
 
         scholar_commentary = (
@@ -1058,13 +1149,20 @@ class MaiHoaDichSoCore:
 
     @classmethod
     def cast_hexagram(cls, dt: datetime, tz_offset_hours: float = 7.0) -> Dict[str, Any]:
-        dt_local = dt.astimezone(VN_TZ) if dt.tzinfo is not None else dt.replace(tzinfo=VN_TZ)
+        tz_info = timezone(timedelta(hours=tz_offset_hours))
+        dt_local = dt.astimezone(tz_info) if dt.tzinfo is not None else dt.replace(tzinfo=tz_info)
 
         lunar_day, lunar_month, lunar_year, is_leap = gregorian_to_lunar(
             dt_local.day, dt_local.month, dt_local.year, time_zone=tz_offset_hours
         )
 
-        year_chi_idx = (lunar_year - 4) % 12
+        # Đồng bộ mốc chuyển năm Địa Chi theo giao tiết Lập Xuân (kinh độ Mặt Trời 315°)
+        lap_xuan_dt = PhongThuyReferenceCore.get_solar_term_riping(
+            dt_local.year, tz_offset_hours=tz_offset_hours
+        ).astimezone(tz_info)
+        year_for_chi = lunar_year - 1 if dt_local < lap_xuan_dt else lunar_year
+
+        year_chi_idx = (year_for_chi - 4) % 12
         year_chi_name = cls.CHI_NAMES[year_chi_idx]
         nam_so = year_chi_idx + 1
 
@@ -1120,7 +1218,7 @@ class MaiHoaDichSoCore:
 
         return {
             "timestamp": dt_local.strftime("%H:%M:%S — %d/%m/%Y"),
-            "lunar_date": f"Ngày {lunar_day} tháng {lunar_month}{' (nhuận)' if is_leap else ''} năm {year_chi_name} ({lunar_year})",
+            "lunar_date": f"Ngày {lunar_day} tháng {lunar_month}{' (nhuận)' if is_leap else ''} năm Chi {year_chi_name} (Âm lịch {lunar_year})",
             "lunar_components": {
                 "nam_so": nam_so,
                 "lunar_month": lunar_month,
@@ -1220,7 +1318,7 @@ st.markdown("""
     • <b>Hội đồng Phương Đông:</b> Lịch pháp Tiết Lập Xuân chuẩn thiên văn (Kinh độ 315°), Can Chi, 60 Hoa Giáp, Bản mệnh Nạp Âm & Cung Phi Lạc Thư (Tôn trọng đa dạng giới tính với cơ chế trung hòa trọng số động).<br>
     • <b>Hội đồng Phương Tây:</b> Chiêm tinh cổ điển 3 Tầng — Tứ đại Nguyên tố (Triplicities), Phẩm tính Vận động (Modalities: Cardinal/Fixed/Mutable) & Hành tinh Đắc vị.<br>
     • <b>Hội đồng Thống kê Ma trận:</b> Phân tích tần suất lịch sử đa chiều ưu tiên FetchData trực tiếp lấy kỳ gần nhất, Smart Cache tích lũy và GitHub Backup khi lỗi với chiến lược động (Hot / Neutral / Cold).<br>
-    • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia xét thời vận tài lộc theo Âm lịch & Giờ Chi thực tế — phân định 5 quan hệ Thể-Dụng, Hỗ quái, xu hướng Quẻ Biến và kỷ luật quản trị vốn.<br>
+    • <b>Trạm Mai Hoa Dịch Số:</b> Mô-đun chuyên gia xét thời vận tài lộc theo Âm lịch, mốc Lập Xuân kinh độ 315° & Giờ Chi thực tế — phân định 5 quan hệ Thể-Dụng, Hỗ quái, xu hướng Quẻ Biến và kỷ luật quản trị vốn.<br>
     • <b>Trợ lý AI Gemini Engine:</b> Giao thức REST API chuẩn hóa giải mã mã nguồn, luận giải thuật toán và cố vấn kỷ luật tài chính dưới lăng kính xã hội học.
 </div>
 """, unsafe_allow_html=True)
@@ -1522,7 +1620,7 @@ st.divider()
 with st.expander("🌸 Mai Hoa Dịch Số — Thời Vận Tài Lộc & Kỷ Luật Vốn", expanded=False):
     st.markdown(
         "<div style='font-size: 13px; color: #C5CAE9; margin-bottom: 10px; line-height: 1.55;'>"
-        "Khởi quẻ theo thời điểm động tâm thực tế (Âm lịch + Giờ Chi), tập trung đánh giá <b>thời vận tài lộc</b> "
+        "Khởi quẻ theo thời điểm động tâm thực tế (Âm lịch, mốc Lập Xuân kinh độ 315° & Giờ Chi), tập trung đánh giá <b>thời vận tài lộc</b> "
         "qua quan hệ Thể – Dụng, Hỗ quái và xu hướng Quẻ Biến."
         "</div>",
         unsafe_allow_html=True
@@ -1600,10 +1698,10 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                             "BẠN LÀ TRỢ LÝ AI KỸ THUẬT & XÃ HỘI HỌC CỦA ỨNG DỤNG 'Vietlott Harmony Edition v2.6'. "
                             "BẠN ĐÃ ĐƯỢC NẠP TOÀN BỘ MÃ NGUỒN VÀ HIỂU RÕ CÁC HÀM: "
                             "- `get_history` / `fetch_github_seed_data` / `parse_history_from_html`: Luôn ưu tiên FetchData trực tiếp lấy kỳ gần nhất, kết hợp Smart Cache và dùng GitHub Seed làm nguồn backup khi FetchData gặp lỗi. "
-                            "- `PhongThuyReferenceCore`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn tiết Lập Xuân (tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định). "
+                            "- `PhongThuyReferenceCore` / `get_lap_xuan_datetime`: Tính Can Chi, Nạp Âm 60 Hoa Giáp, Cung Phi Lạc Thư chuẩn giao tiết Lập Xuân theo kinh độ Mặt Trời 315° bằng Bisection trên Julian Day (tự động bỏ qua Cung Phi và điều chỉnh trọng số động xuống 28.3% nếu giới tính không xác định). "
                             "- `FlexibleCouncilEvaluator.judge_western_deep`: Chiêm tinh cổ điển 3 tầng (Tứ đại Nguyên tố, Phẩm tính Vận động, Hành tinh Đắc vị). "
                             "- `FlexibleCouncilEvaluator.judge_statistics_hot_cold`: Lọc chiến lược Hot/Neutral/Cold trên tập dữ liệu lịch sử thật. "
-                            "- `MaiHoaDichSoCore` / `gregorian_to_lunar`: Khởi quẻ theo Âm lịch + Giờ Chi thực tế, xuất Quẻ Chủ, Hào Động, Hỗ Quái, Quẻ Biến, phân định 5 quan hệ Thể-Dụng và luận thời vận tài lộc. "
+                            "- `MaiHoaDichSoCore` / `gregorian_to_lunar`: Khởi quẻ theo Âm lịch + Giờ Chi thực tế, đồng bộ mốc chuyển năm Địa Chi theo Lập Xuân kinh độ 315°, xuất Quẻ Chủ, Hào Động, Hỗ Quái, Quẻ Biến, phân định 5 quan hệ Thể-Dụng và luận thời vận tài lộc. "
                             "QUY TẮC BẮT BUỘC: Trả lời thẳng vào bản chất kỹ thuật, trích dẫn trực tiếp tên hàm/logic thật trong mã nguồn, dùng ngôn ngữ tâm lý hành vi để giải thích, "
                             "và luôn nhắc nhở sòng phẳng rằng xổ số là ngẫu nhiên tuyệt đối, ứng dụng là bộ lọc kỷ luật quản trị cảm xúc chứ không phải công cụ bẻ khóa."
                         )
