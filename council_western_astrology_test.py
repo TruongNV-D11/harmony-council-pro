@@ -1150,22 +1150,84 @@ def run_standalone_astrology_test():
         draw_hour = st.selectbox("Giờ quay", [13, 18, 21], index=1)
 
     tz_offset = st.number_input("Múi giờ địa phương (UTC+)", value=7.0, min_value=-12.0, max_value=14.0, step=0.5)
+    import streamlit.components.v1 as components
+
     province_names = list(VIETNAM_PROVINCES_34.keys())
-    selected_province = st.selectbox("Tỉnh / Thành phố quan sát", province_names, index=0)
+    selected_province = st.selectbox("Tỉnh / Thành phố quan sát (Lớp dự phòng)", province_names, index=0)
+
+    if "gps_coord_text" not in st.session_state:
+        st.session_state["gps_coord_text"] = ""
+    if "gps_status_msg" not in st.session_state:
+        st.session_state["gps_status_msg"] = ""
+
+    gps_col, status_col = st.columns([1.3, 2.7])
+    with gps_col:
+        trigger_gps = st.button("📡 Lấy GPS điện thoại / trình duyệt")
+    with status_col:
+        if st.session_state["gps_status_msg"]:
+            st.caption(st.session_state["gps_status_msg"])
+
+    if trigger_gps:
+        st.session_state["gps_status_msg"] = (
+            "Đang yêu cầu quyền định vị GPS từ thiết bị... Nếu bị từ chối hoặc GPS yếu, "
+            "hệ thống tự giữ lớp dự phòng theo tỉnh/thành."
+        )
+        components.html(
+            """
+            <script>
+            (function() {
+                const parentDoc = window.parent.document;
+                const inputs = Array.from(parentDoc.querySelectorAll('input[type="text"]'));
+                const targetInput = inputs.find(el =>
+                    (el.placeholder || "").includes("10.8231, 106.6297")
+                );
+                if (!navigator.geolocation) {
+                    if (targetInput && !targetInput.value) {
+                        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        const lat = pos.coords.latitude.toFixed(6);
+                        const lon = pos.coords.longitude.toFixed(6);
+                        if (targetInput) {
+                            const nativeSetter = Object.getOwnPropertyDescriptor(
+                                window.parent.HTMLInputElement.prototype, "value"
+                            ).set;
+                            nativeSetter.call(targetInput, `${lat}, ${lon}`);
+                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    },
+                    function(_err) {
+                        // Khi người dùng từ chối hoặc lỗi GPS: không chặn tiến trình, giữ nguyên dự phòng tỉnh/thành
+                    },
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+                );
+            })();
+            </script>
+            """,
+            height=0,
+        )
+
     pasted_coords = st.text_input(
-        "Dán tọa độ toàn cầu / Zalo (tùy chọn)",
-        value="",
+        "Tọa độ bổ sung (GPS / Dán Zalo / Google Maps — tùy chọn)",
+        value=st.session_state["gps_coord_text"],
+        key="pasted_coords_input",
         placeholder="Ví dụ: 10.8231, 106.6297 hoặc link @lat,lon",
     )
+    st.session_state["gps_coord_text"] = pasted_coords
+
     fb_lat, fb_lon = VIETNAM_PROVINCES_34[selected_province]
     supp_lat, supp_lon, is_supp_valid, coord_note = parse_pasted_coordinates(pasted_coords, fb_lat, fb_lon)
     if is_supp_valid:
         st.caption(
-            f"📍 Tọa độ gốc ({selected_province}): `({fb_lat}, {fb_lon})` | "
-            f"➕ Lớp bổ sung: `({supp_lat}, {supp_lon})` — *{coord_note}*"
+            f"📍 Dự phòng tỉnh/thành ({selected_province}): `({fb_lat}, {fb_lon})` | "
+            f"➕ Lớp bổ sung đang bật: `({supp_lat}, {supp_lon})` — *{coord_note}*"
         )
     else:
-        st.caption(f"📍 Tọa độ gốc ({selected_province}): `({fb_lat}, {fb_lon})` — *{coord_note}*")
+        st.caption(f"📍 Dự phòng tỉnh/thành ({selected_province}): `({fb_lat}, {fb_lon})` — *{coord_note}*")
 
     game_choice = st.selectbox(
         "Dải số trò chơi kiểm thử",
