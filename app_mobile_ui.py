@@ -2719,7 +2719,7 @@ class FlexibleCouncilEvaluator:
 # =====================================================================
 # 🏛️ 4. HEADER & BANNER TUYÊN NGÔN VẬN HÀNH (ĐẶT Ở ĐẦU GIAO DIỆN)
 # =====================================================================
-st.markdown("### 🏛️ Vietlott Harmony Edition v2.6")
+st.markdown("### 🏛️ Vietlott Harmony Edition v2.7")
 st.caption("🔒 **ACADEMIC ENGINE ACTIVE** | Tích hợp Huyền học Đông - Tây 3 Tầng & Thống kê Định lượng")
 
 st.markdown("""
