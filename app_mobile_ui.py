@@ -801,9 +801,13 @@ def get_history_with_diag(
     force_refresh: bool = False,
 ) -> Tuple[List[Dict[str, Any]], str, float, Dict[str, Any]]:
     """Phiên bản get_history trả kèm báo cáo chẩn đoán chi tiết từng bước."""
+    if game_key not in GAMES:
+        return [], f"Game '{game_key}' không hợp lệ hoặc không được hỗ trợ", 0.0, {"game": game_key, "error": "INVALID_GAME_KEY"}
+
     expected_slot_date, expected_slot_time = get_latest_expected_draw_slot(game_key)
     diag: Dict[str, Any] = {
         "game": game_key,
+        "scoped_single_game": True,
         "expected_latest_date": str(expected_slot_date),
         "expected_latest_slot": expected_slot_time,
         "cache_used": False,
@@ -858,12 +862,11 @@ def get_history_with_diag(
     # Bước 1: Live Web (ưu tiên vietlott.vn -> minhngoc.net -> các nguồn dự phòng khác)
     live_fetched: List[Dict[str, Any]] = []
     active_source_url = ""
+    # Chỉ quét đúng nguồn của riêng game_key đang chọn
     base_vn = str(game_cfg.get("vietlott_url") or game_cfg.get("url") or "").strip()
     vn_variants = [
         base_vn,
         base_vn.rstrip("/") + "/",
-        "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/",
-        "https://vietlott.vn/",
     ]
     ordered_urls = [u for u in vn_variants if u] + [
         game_cfg.get("minhngoc_url"),
