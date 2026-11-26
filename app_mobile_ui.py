@@ -897,6 +897,26 @@ class MaiHoaDichSoCore:
         h_elem = cls.BAT_QUAI[ha_ho_id]["element"]
         if t_elem == h_elem:
             return cls.HO_QUAI_TAI_LOC[t_elem]
+        if cls.NGU_HANH_KHAC.get(t_elem) == h_elem:
+            return (
+                f"Hỗ quái có Thượng hỗ ({t_elem}) khắc Hạ hỗ ({h_elem}), cho thấy lớp điều tiết bên trên đang siết nhịp hoặc "
+                f"tạo áp lực kìm hãm lên tầng vận hành bên dưới; cần giữ tỷ trọng vốn gọn trước khi mở rộng."
+            )
+        if cls.NGU_HANH_KHAC.get(h_elem) == t_elem:
+            return (
+                f"Hỗ quái có Hạ hỗ ({h_elem}) khắc Thượng hỗ ({t_elem}), cho thấy lực động từ tầng dưới đang đẩy ngược lên "
+                f"tầng trên, dễ làm nhịp vận hành giằng co hoặc phát sinh biến số bất ngờ."
+            )
+        if cls.NGU_HANH_SINH.get(t_elem) == h_elem:
+            return (
+                f"Hỗ quái có Thượng hỗ ({t_elem}) sinh cho Hạ hỗ ({h_elem}), cho thấy lớp trên dồn khí nuôi lớp dưới, "
+                f"dòng vận hành ngầm có đường tiếp sức nhưng cần kiểm soát tốc độ giải ngân."
+            )
+        if cls.NGU_HANH_SINH.get(h_elem) == t_elem:
+            return (
+                f"Hỗ quái có Hạ hỗ ({h_elem}) sinh cho Thượng hỗ ({t_elem}), cho thấy nền dưới dồn lực đẩy lên lớp trên, "
+                f"nhưng nếu thiếu điểm giữ ở tầng gốc thì dễ bị rút bớt lực nền."
+            )
         return (
             f"Hỗ quái kết hợp hành {t_elem} (thượng hỗ) và {h_elem} (hạ hỗ), cho thấy diễn biến ngầm bên trong "
             f"đang có sự giao thoa giữa hai lớp khí, cần quan sát kỹ nhịp chuyển tiếp trước khi tăng tỷ trọng vốn."
@@ -1011,17 +1031,21 @@ class MaiHoaDichSoCore:
             )
 
         method_note = (
-            "Ghi chú phương pháp: Quẻ khởi theo thời điểm động tâm (Âm lịch + Giờ Chi; số năm quy ước theo thứ tự Địa chi 1..12), "
+            "<b>Ghi chú phương pháp:</b> Quẻ khởi theo thời điểm động tâm (Âm lịch + Giờ Chi; số năm quy ước theo thứ tự Địa chi 1..12), "
             "luận chuyên biệt dưới góc độ tài lộc, dòng tiền và kỷ luật quản trị vốn."
         )
 
         scholar_commentary = (
+            f"<p style='margin-bottom: 10px;'>"
             f"Quẻ Chủ lập được {chu_str}, động tại {hao_note} "
             f"{wealth_analysis} "
-            f"Xét tượng quẻ dưới góc độ tài lộc: phía Thể mang {the_tuong}, còn phía Dụng mang {dung_tuong}. "
+            f"Xét tượng quẻ dưới góc độ tài lộc: phía Thể mang {the_tuong}, còn phía Dụng mang {dung_tuong}."
+            f"</p>"
+            f"<p style='margin-bottom: 10px;'>"
             f"Diễn biến bên trong kết thành Hỗ quái {ho_str}: {ho_trend_note} "
-            f"Sau đó chuyển sang Quẻ Biến {bien_str}: {bien_trend_note} "
-            f"{method_note}"
+            f"Sau đó chuyển sang Quẻ Biến {bien_str}: {bien_trend_note}"
+            f"</p>"
+            f"<p style='margin-bottom: 0; color: #B0BEC5; font-size: 12.5px;'>{method_note}</p>"
         )
 
         return {
