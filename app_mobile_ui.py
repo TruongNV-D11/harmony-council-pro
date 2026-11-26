@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Tuple, Any
 # 🏛️ 1. CẤU HÌNH GIAO DIỆN DI ĐỘNG & THƯỢNG LƯU (DARK THEME)
 # =====================================================================
 st.set_page_config(
-    page_title="Vietlott Harmony Edition v2.6 - Academic Chamber",
+    page_title="Vietlott Harmony Edition v2.7 - Academic Chamber",
     page_icon="🏛️",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -3398,7 +3398,7 @@ with st.expander("⚙️ Tùy chọn Quản trị viên", expanded=False):
 # =====================================================================
 st.markdown("""
     <div class="watermark-box">
-        <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ Vietlott Harmony Edition v2.6 — ACADEMIC EDITION</p>
+        <p style="color: #00E676; font-weight: bold; margin: 0; font-size: 15px;">🏛️ Vietlott Harmony Edition v2.7 — ACADEMIC EDITION</p>
         <p style="color: #FAFAFA; margin: 5px 0 0 0; font-size: 13px;">🔒 Phát triển độc quyền & Vận hành bởi: <b>TruongNV</b></p>
         <p style="color: #8C92A4; margin: 3px 0 0 0; font-size: 11px;">Hệ thống phân tích định lượng đa chiều Real-Time Engine • Academic Profile Active</p>
     </div>
