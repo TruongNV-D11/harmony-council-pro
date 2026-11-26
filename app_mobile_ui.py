@@ -587,8 +587,59 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
 
 
 def parse_minhngoc_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
-    """Parser chuyên biệt cho nguồn ưu tiên thứ 2: minhngoc.net."""
-    return _extract_ball_records(html, game_cfg)
+    """Parser chuyên biệt cho minhngoc.net: ưu tiên cụm bóng HTML, bổ sung bóc nhiều kỳ theo ngày."""
+    records = _extract_ball_records(html, game_cfg)
+    if len(records) >= 3:
+        return records
+    if not html:
+        return records
+
+    pick_n = game_cfg["pick"]
+    max_m = game_cfg["max_main"]
+    has_spec = game_cfg.get("has_special", False)
+    spec_max = game_cfg.get("special_max", 12)
+
+    clean_html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    # Tách các khối bảng/box kết quả nếu có
+    blocks = re.findall(r"<(?:table|div|ul)[^>]*>.*?</(?:table|div|ul)>", clean_html, flags=re.IGNORECASE | re.DOTALL)
+    extra_records: List[Dict[str, Any]] = []
+    draw_id = 9000
+
+    for blk in blocks:
+        blk_text = re.sub(r"<[^>]+>", " ", blk)
+        dt_match = re.search(r"\b(\d{2}/\d{2}/\d{4})\b", blk_text)
+        dt_str = dt_match.group(1) if dt_match else ""
+        nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", blk_text)]
+        mains_raw: List[int] = []
+        for n in nums:
+            if 1 <= n <= max_m and n not in mains_raw:
+                mains_raw.append(n)
+                if len(mains_raw) == pick_n:
+                    break
+        if len(mains_raw) == pick_n:
+            rec: Dict[str, Any] = {
+                "draw": draw_id,
+                "date": dt_str,
+                "mains": sorted(mains_raw),
+            }
+            if has_spec:
+                for n in nums:
+                    if 1 <= n <= spec_max:
+                        rec["special"] = n
+                        break
+            extra_records.append(rec)
+            draw_id -= 1
+            if len(extra_records) >= 20:
+                break
+
+    # Hợp nhất giữ thứ tự ưu tiên từ _extract_ball_records
+    seen = {tuple(r.get("mains", [])) for r in records}
+    for r in extra_records:
+        t = tuple(r.get("mains", []))
+        if t not in seen:
+            seen.add(t)
+            records.append(r)
+    return records
 
 
 def parse_history_from_html(html: str, game_cfg: dict, source_url: str = "") -> List[Dict[str, Any]]:
@@ -845,18 +896,22 @@ def get_history_with_diag(
 
     diag["live_valid_count"] = len(live_fetched)
 
-    # Bước 2: GitHub Seed Backup
+    # Bước 2: GitHub Seed Backup (tùy chọn bổ sung; nếu GitHub ngưng chia sẻ vẫn chạy độc lập qua Live + Backups + Cache)
     github_seed: List[Dict[str, Any]] = []
+    github_available = False
     current_pool_len = len(live_fetched) + len(existing_cache)
     if (not live_fetched or current_pool_len < sample_k) and game_cfg.get("github_jsonl"):
+        raw_gh = fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg, diag=diag)
         github_seed = [
             _normalize_record(r, game_cfg, game_key=game_key)
-            for r in fetch_github_seed_data(game_cfg["github_jsonl"], game_cfg, diag=diag)
+            for r in raw_gh
             if is_valid_record(r, game_cfg)
         ]
+        github_available = len(github_seed) > 0
     diag["github_valid_count"] = len(github_seed)
+    diag["github_available"] = github_available
 
-    # Bước 3: Hợp nhất
+    # Bước 3: Hợp nhất dữ liệu thật và ghi nhật ký vào Smart Cache
     combined = _merge_unique_history(
         live_fetched,
         _merge_unique_history(existing_cache, github_seed, game_cfg, MAX_CACHE_RECORDS, game_key=game_key),
@@ -865,9 +920,11 @@ def get_history_with_diag(
         game_key=game_key,
     )
     diag["final_count"] = len(combined)
+    diag["cache_journal_written"] = False
 
     if combined:
-        _atomic_write_json(cache_file, combined)
+        journal_ok = _atomic_write_json(cache_file, combined)
+        diag["cache_journal_written"] = bool(journal_ok)
         newest_rec_date = str(combined[0].get("date", "") or "")
         if live_fetched or newest_rec_date >= expected_slot_date.strftime("%Y-%m-%d"):
             _atomic_write_json(
@@ -877,19 +934,22 @@ def get_history_with_diag(
                     "latest_slot": expected_slot_time,
                     "source_latest_date": newest_rec_date,
                     "record_count": len(combined),
+                    "live_source": active_source_url or "cache/backup",
+                    "github_available": github_available,
                     "updated_at": now_vn().strftime("%Y-%m-%d %H:%M:%S"),
                 },
             )
             cache_age = 0.0
 
+        gh_note = "" if github_available or not game_cfg.get("github_jsonl") else " | GitHub Seed không khả dụng -> Tự chủ bằng Live & Cache"
         if live_fetched:
-            status = f"🟢 FetchData Trực tuyến ({active_source_url}) — Cập nhật kỳ gần nhất (Tích lũy {len(combined)}/{MAX_CACHE_RECORDS} kỳ thật)"
+            status = f"🟢 Live ({active_source_url}) cập nhật kỳ mới nhất -> Ghi nhật ký Cache ({len(combined)}/{MAX_CACHE_RECORDS} kỳ){gh_note}"
         elif existing_cache and github_seed:
-            status = f"🛡️ FetchData lỗi -> Smart Cache + GitHub Backup ({len(combined)} kỳ thật)"
+            status = f"🛡️ Live tạm gián đoạn -> Smart Cache + GitHub Backup ({len(combined)} kỳ thật)"
         elif github_seed:
-            status = f"🛡️ FetchData lỗi -> GitHub Backup Data ({len(combined)} kỳ lịch sử thật)"
+            status = f"🛡️ Live tạm gián đoạn -> GitHub Backup ({len(combined)} kỳ lịch sử thật)"
         else:
-            status = f"🛡️ FetchData lỗi -> Smart Cache Dự phòng ({len(combined)} kỳ thật)"
+            status = f"🛡️ Tự chủ nhật ký Smart Cache ({len(combined)} kỳ thật — không phụ thuộc GitHub)"
 
         _atomic_write_json(os.path.join(BASE_DIR, f"last_fetch_diag_{game_key}.json"), diag)
         return combined[:sample_k], status, cache_age, diag
