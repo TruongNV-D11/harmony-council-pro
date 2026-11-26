@@ -98,10 +98,10 @@ def parse_pasted_coordinates(
 ) -> Tuple[float, float, bool, str]:
     """
     Trích xuất tọa độ địa lý (latitude, longitude) từ chuỗi dán Zalo / Google Maps
-    hoặc tọa độ thập phân toàn cầu.
+    hoặc tọa độ thập phân toàn cầu. Trả về (lat, lon, is_valid_supplement, note).
     """
     if not raw_text or not raw_text.strip():
-        return fallback_lat, fallback_lon, False, "Khu vực mặc định đã chọn"
+        return fallback_lat, fallback_lon, False, "Không dán tọa độ bổ sung — dùng tọa độ tỉnh/thành"
 
     txt = raw_text.strip()
     url_match = re.search(
@@ -112,7 +112,7 @@ def parse_pasted_coordinates(
     else:
         nums = re.findall(r"[-+]?\d+(?:\.\d+)?", txt)
         if len(nums) < 2:
-            return fallback_lat, fallback_lon, False, "Không đủ 2 giá trị tọa độ — dùng khu vực mặc định"
+            return fallback_lat, fallback_lon, False, "Tọa độ dán chưa đủ 2 số — giữ tọa độ tỉnh/thành gốc"
         lat_val, lon_val = float(nums[0]), float(nums[1])
 
     upper_txt = txt.upper()
@@ -122,9 +122,56 @@ def parse_pasted_coordinates(
         lon_val = -abs(lon_val)
 
     if -90.0 <= lat_val <= 90.0 and -180.0 <= lon_val <= 180.0:
-        return round(lat_val, 6), round(lon_val, 6), True, "Tọa độ dán (Toàn cầu / Zalo)"
+        return round(lat_val, 6), round(lon_val, 6), True, "Lớp tọa độ bổ sung hợp lệ (Zalo / Toàn cầu)"
 
-    return fallback_lat, fallback_lon, False, "Tọa độ ngoài biên [-90..90, -180..180] — dùng khu vực mặc định"
+    return fallback_lat, fallback_lon, False, "Tọa độ dán ngoài biên [-90..90, -180..180] — giữ tọa độ tỉnh/thành gốc"
+
+
+def compute_supplement_coord_delta(
+    base_lat: float,
+    base_lon: float,
+    supp_lat: float,
+    supp_lon: float,
+    base_chart: Dict[str, Any],
+    supp_chart: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Tính độ lệch không gian & sai khác góc địa phương (AC, MC, Giờ Hành tinh)
+    giữa tọa độ tỉnh/thành gốc (base) và lớp tọa độ dán bổ sung (supplement).
+    Dùng khoảng cách Haversine (km) để chuẩn hóa trọng số bổ sung trong [0..0.15].
+    """
+    r_earth_km = 6371.0
+    dlat = math.radians(supp_lat - base_lat)
+    dlon = math.radians(supp_lon - base_lon)
+    a_hav = (
+        math.sin(dlat / 2.0) ** 2
+        + math.cos(math.radians(base_lat))
+        * math.cos(math.radians(supp_lat))
+        * math.sin(dlon / 2.0) ** 2
+    )
+    dist_km = 2.0 * r_earth_km * math.asin(min(1.0, math.sqrt(a_hav)))
+
+    # Độ lệch kinh độ địa phương (LST thay đổi ~4 phút/độ kinh), ảnh hưởng AC, MC và Giờ Hành tinh
+    delta_lon_deg = round(supp_lon - base_lon, 4)
+    delta_lat_deg = round(supp_lat - base_lat, 4)
+    lst_shift_minutes = round(delta_lon_deg * 4.0, 2)
+
+    # Trọng số lớp bổ sung tăng dần theo khoảng cách dịch chuyển (tối đa 0.15 tại >= 150 km)
+    supp_weight = round(min(0.15, (dist_km / 150.0) * 0.15), 4)
+
+    return {
+        "distance_km": round(dist_km, 2),
+        "delta_lat_deg": delta_lat_deg,
+        "delta_lon_deg": delta_lon_deg,
+        "lst_shift_minutes": lst_shift_minutes,
+        "supp_weight": supp_weight,
+        "base_ac": f"{base_chart['ascendant']['sign']} ({base_chart['ascendant']['deg_in_sign']}°)",
+        "supp_ac": f"{supp_chart['ascendant']['sign']} ({supp_chart['ascendant']['deg_in_sign']}°)",
+        "base_mc": f"{base_chart['midheaven']['sign']} ({base_chart['midheaven']['deg_in_sign']}°)",
+        "supp_mc": f"{supp_chart['midheaven']['sign']} ({supp_chart['midheaven']['deg_in_sign']}°)",
+        "base_hour": f"{base_chart['planetary_hour']['phase_label']} - {base_chart['planetary_hour']['hour_ruler']}",
+        "supp_hour": f"{supp_chart['planetary_hour']['phase_label']} - {supp_chart['planetary_hour']['hour_ruler']}",
+    }
 
 
 # =====================================================================
@@ -742,9 +789,16 @@ class AstronomicalAstrologyEngine:
         """
         Vẽ bản đồ sao 360° chuẩn Hoàng đạo Nhiệt đới bằng matplotlib,
         tự động chống chồng lấn nhãn khi các hành tinh nằm gần nhau.
+        Ném ImportError rõ ràng nếu môi trường thiếu matplotlib để lớp UI fallback.
         """
-        import matplotlib.pyplot as plt
-        from matplotlib.patches import Wedge, Circle
+        try:
+            import matplotlib.pyplot as plt
+            from matplotlib.patches import Wedge, Circle
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "Thiếu thư viện 'matplotlib' trong môi trường chạy. "
+                "Hãy thêm 'matplotlib' vào requirements.txt trên Streamlit Cloud."
+            ) from exc
 
         fig, ax = plt.subplots(figsize=(6.4, 6.4), dpi=135)
         fig.patch.set_facecolor("#0E1117")
@@ -931,6 +985,8 @@ class WesternCouncilEvaluator:
         natal_sun_sign_info: Dict[str, Any],
         transit_chart: Dict[str, Any],
         natal_chart: Optional[Dict[str, Any]] = None,
+        supplement_chart: Optional[Dict[str, Any]] = None,
+        supp_weight: float = 0.0,
     ) -> Dict[str, Any]:
         """
         Chấm điểm chi tiết cho 1 ứng viên số `num` và trả kèm giải trình học thuật.
@@ -995,6 +1051,25 @@ class WesternCouncilEvaluator:
                 + 0.37 * score_transit_aspects
             )
 
+        # 5. Lớp tọa độ dán bổ sung (chỉ kích hoạt khi có tọa độ dán hợp lệ & supplement_chart)
+        score_supplement: Optional[float] = None
+        if supplement_chart and supp_weight > 0.0:
+            w_clamped = max(0.0, min(0.20, float(supp_weight)))
+            supp_mod = 1.0 if num_sign_info["modality"] == supplement_chart["ascendant"]["modality"] else 0.55
+            supp_hour_ruler = supplement_chart["planetary_hour"]["hour_ruler"]
+            supp_p_weights = {
+                "Sun": 1.0,
+                "Moon": 1.2,
+                "Jupiter": 0.9,
+                "Venus": 0.8,
+                supp_hour_ruler: 1.3,
+            }
+            supp_asp = cls._aspect_resonance_to_bodies(
+                num_deg, supplement_chart["bodies"], supp_p_weights
+            )
+            score_supplement = 0.50 * supp_mod + 0.50 * supp_asp
+            final_score = (1.0 - w_clamped) * final_score + w_clamped * score_supplement
+
         return {
             "num": num,
             "ecliptic_deg": round(num_deg, 2),
@@ -1005,6 +1080,7 @@ class WesternCouncilEvaluator:
             "score_modality": round(score_modality, 4),
             "score_transit_aspects": round(score_transit_aspects, 4),
             "score_natal": round(score_natal, 4) if score_natal is not None else None,
+            "score_supplement": round(score_supplement, 4) if score_supplement is not None else None,
             "final_score": round(final_score, 4),
         }
 
@@ -1082,8 +1158,14 @@ def run_standalone_astrology_test():
         placeholder="Ví dụ: 10.8231, 106.6297 hoặc link @lat,lon",
     )
     fb_lat, fb_lon = VIETNAM_PROVINCES_34[selected_province]
-    lat, lon, is_pasted, coord_note = parse_pasted_coordinates(pasted_coords, fb_lat, fb_lon)
-    st.caption(f"📍 Tọa độ đang tính: `({lat}, {lon})` — *{coord_note}*")
+    supp_lat, supp_lon, is_supp_valid, coord_note = parse_pasted_coordinates(pasted_coords, fb_lat, fb_lon)
+    if is_supp_valid:
+        st.caption(
+            f"📍 Tọa độ gốc ({selected_province}): `({fb_lat}, {fb_lon})` | "
+            f"➕ Lớp bổ sung: `({supp_lat}, {supp_lon})` — *{coord_note}*"
+        )
+    else:
+        st.caption(f"📍 Tọa độ gốc ({selected_province}): `({fb_lat}, {fb_lon})` — *{coord_note}*")
 
     game_choice = st.selectbox(
         "Dải số trò chơi kiểm thử",
@@ -1102,12 +1184,28 @@ def run_standalone_astrology_test():
         sun_lon_birth = AstronomicalAstrologyEngine.compute_geocentric_longitudes(jd_birth)["Sun"]
         natal_sun_info = AstronomicalAstrologyEngine.lon_to_sign_info(sun_lon_birth, planet_key="Sun")
 
-        transit_chart = AstronomicalAstrologyEngine.compute_chart(
-            draw_dt, lat, lon, tz_offset_hours=float(tz_offset), chart_type="TRANSIT"
+        # Tọa độ chính dùng cho biểu đồ & góc địa phương: ưu tiên tọa độ bổ sung hợp lệ, mặc định dùng tỉnh/thành
+        active_lat, active_lon = (supp_lat, supp_lon) if is_supp_valid else (fb_lat, fb_lon)
+
+        base_chart = AstronomicalAstrologyEngine.compute_chart(
+            draw_dt, fb_lat, fb_lon, tz_offset_hours=float(tz_offset), chart_type="BASE_CITY"
         )
+        if is_supp_valid:
+            supp_chart = AstronomicalAstrologyEngine.compute_chart(
+                draw_dt, supp_lat, supp_lon, tz_offset_hours=float(tz_offset), chart_type="SUPP_COORD"
+            )
+            coord_delta = compute_supplement_coord_delta(
+                fb_lat, fb_lon, supp_lat, supp_lon, base_chart, supp_chart
+            )
+            transit_chart = supp_chart
+        else:
+            supp_chart = None
+            coord_delta = None
+            transit_chart = base_chart
+
         natal_chart = (
             AstronomicalAstrologyEngine.compute_chart(
-                birth_dt_ref, lat, lon, tz_offset_hours=float(tz_offset), chart_type="NATAL"
+                birth_dt_ref, active_lat, active_lon, tz_offset_hours=float(tz_offset), chart_type="NATAL"
             )
             if has_birth_time
             else None
@@ -1160,15 +1258,64 @@ def run_standalone_astrology_test():
             st.write("Không có góc chiếu chính trong biên độ orb tại thời điểm này.")
 
         st.markdown("### 🎡 Bản đồ sao Hoàng đạo 360° (Transit Chart)")
-        fig = AstronomicalAstrologyEngine.render_chart_figure(
-            transit_chart, highlight_sign=natal_sun_info["sign"]
-        )
-        st.pyplot(fig, use_container_width=True)
+        try:
+            fig = AstronomicalAstrologyEngine.render_chart_figure(
+                transit_chart, highlight_sign=natal_sun_info["sign"]
+            )
+            st.pyplot(fig, use_container_width=True)
+        except ModuleNotFoundError:
+            st.warning(
+                "Môi trường hiện tại chưa cài `matplotlib` nên chưa vẽ biểu đồ matplotlib. "
+                "Hãy thêm `matplotlib` vào `requirements.txt` rồi reboot app trên Streamlit Cloud."
+            )
+            chart_summary_rows = [
+                {
+                    "Điểm / Thiên thể": "Ascendant (AC)",
+                    "Kinh độ": f"{transit_chart['ascendant']['lon']}°",
+                    "Cung": f"{transit_chart['ascendant']['sign']} ({transit_chart['ascendant']['deg_in_sign']}°)",
+                    "Nhà": "Nhà 1 (Whole Sign)",
+                },
+                {
+                    "Điểm / Thiên thể": "Midheaven (MC)",
+                    "Kinh độ": f"{transit_chart['midheaven']['lon']}°",
+                    "Cung": f"{transit_chart['midheaven']['sign']} ({transit_chart['midheaven']['deg_in_sign']}°)",
+                    "Nhà": f"Nhà {transit_chart['midheaven']['sign_idx'] - transit_chart['ascendant']['sign_idx'] + 1 if False else ((transit_chart['midheaven']['sign_idx'] - transit_chart['ascendant']['sign_idx']) % 12) + 1}",
+                },
+            ]
+            for p_key, b_info in transit_chart["bodies"].items():
+                chart_summary_rows.append({
+                    "Điểm / Thiên thể": AstronomicalAstrologyEngine.PLANET_META[p_key][1],
+                    "Kinh độ": f"{b_info['lon']}°",
+                    "Cung": f"{b_info['sign']} ({b_info['deg_in_sign']}°)",
+                    "Nhà": f"Nhà {b_info['house']}",
+                })
+            st.dataframe(chart_summary_rows, use_container_width=True)
+
+        if coord_delta is not None:
+            st.markdown("### 🌐 Phân tích Lớp Tọa độ Dán Bổ sung (So với Tỉnh/Thành Gốc)")
+            st.table([
+                {
+                    "Khoảng cách Haversine": f"{coord_delta['distance_km']} km",
+                    "Độ lệch (ΔLat, ΔLon)": f"{coord_delta['delta_lat_deg']}°, {coord_delta['delta_lon_deg']}°",
+                    "Lệch LST": f"{coord_delta['lst_shift_minutes']} phút",
+                    "Trọng số bổ sung": coord_delta["supp_weight"],
+                    "AC Gốc -> Bổ sung": f"{coord_delta['base_ac']} -> {coord_delta['supp_ac']}",
+                    "MC Gốc -> Bổ sung": f"{coord_delta['base_mc']} -> {coord_delta['supp_mc']}",
+                    "Giờ HT Gốc -> Bổ sung": f"{coord_delta['base_hour']} -> {coord_delta['supp_hour']}",
+                }
+            ])
 
         st.markdown(f"### 🎯 Bảng Chấm điểm Định lượng Top 12 Ứng viên (1..{max_main})")
+        supp_w = coord_delta["supp_weight"] if coord_delta is not None else 0.0
         eval_rows = [
             WesternCouncilEvaluator.evaluate_candidate(
-                n, max_main, natal_sun_info, transit_chart, natal_chart=natal_chart
+                n,
+                max_main,
+                natal_sun_info,
+                transit_chart,
+                natal_chart=natal_chart,
+                supplement_chart=supp_chart,
+                supp_weight=supp_w,
             )
             for n in range(1, max_main + 1)
         ]
