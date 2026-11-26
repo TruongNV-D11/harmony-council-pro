@@ -402,21 +402,99 @@ def fetch_github_seed_data(github_url: str, game_cfg: dict, diag: Optional[Dict[
     return records
 
 
+BROWSER_HEADER_PROFILES = [
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "max-age=0",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-User": "?1",
+        "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "Referer": "https://vietlott.vn/",
+    },
+    {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Referer": "https://www.google.com.vn/",
+    },
+]
+
+
+def _is_challenge_or_block_page(html: str) -> bool:
+    if not html:
+        return True
+    lower = html.lower()
+    block_markers = [
+        "access denied",
+        "request blocked",
+        "captcha",
+        "cf-browser-verification",
+        "just a moment...",
+        "ddos-guard",
+        "incapsula",
+        "sucuri",
+        "forbidden",
+    ]
+    if len(html) < 8500 and any(m in lower for m in block_markers):
+        return True
+    return False
+
+
 def fetch_html_with_diag(url: str, timeout: int = 12) -> Tuple[str, Dict[str, Any]]:
     """Lấy HTML trực tiếp kèm thông tin chẩn đoán HTTP status, độ dài và lỗi."""
-    info: Dict[str, Any] = {"url": url, "status": None, "bytes": 0, "elapsed_s": 0.0, "error": ""}
+    info: Dict[str, Any] = {
+        "url": url,
+        "status": None,
+        "bytes": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "profile_used": 0,
+    }
     t0 = time.time()
-    try:
-        resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=timeout)
-        info["elapsed_s"] = round(time.time() - t0, 2)
-        info["status"] = resp.status_code
-        info["bytes"] = len(resp.text or "")
-        if resp.status_code == 200 and resp.text:
-            return resp.text, info
-        info["error"] = f"HTTP_{resp.status_code}"
-    except Exception as e:
-        info["elapsed_s"] = round(time.time() - t0, 2)
-        info["error"] = f"{type(e).__name__}: {e}"
+    is_vietlott = "vietlott.vn" in (url or "").lower()
+    profiles = BROWSER_HEADER_PROFILES if is_vietlott else [DEFAULT_HEADERS]
+
+    with requests.Session() as sess:
+        if is_vietlott:
+            try:
+                sess.get(
+                    "https://vietlott.vn/",
+                    headers=profiles[0],
+                    timeout=min(timeout, 8),
+                    allow_redirects=True,
+                )
+            except Exception:
+                pass
+
+        for p_idx, hdr in enumerate(profiles, start=1):
+            try:
+                resp = sess.get(url, headers=hdr, timeout=timeout, allow_redirects=True)
+                info["elapsed_s"] = round(time.time() - t0, 2)
+                info["status"] = resp.status_code
+                info["bytes"] = len(resp.text or "")
+                info["profile_used"] = p_idx
+                if resp.status_code == 200 and resp.text and not _is_challenge_or_block_page(resp.text):
+                    info["error"] = ""
+                    return resp.text, info
+                info["error"] = f"HTTP_{resp.status_code}" if resp.status_code != 200 else "CHALLENGE_OR_EMPTY_HTML"
+            except Exception as e:
+                info["elapsed_s"] = round(time.time() - t0, 2)
+                info["profile_used"] = p_idx
+                info["error"] = f"{type(e).__name__}: {e}"
     return "", info
 
 
@@ -472,7 +550,7 @@ def _extract_ball_records(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
 
 
 def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
-    """Parser chuyên biệt cho nguồn vietlott.vn."""
+    """Parser chuyên biệt cho nguồn vietlott.vn (hỗ trợ thẻ bóng, bảng kết quả và chuỗi số liền kề)."""
     records = _extract_ball_records(html, game_cfg)
     if records:
         return records
@@ -483,18 +561,28 @@ def parse_vietlott_vn_html(html: str, game_cfg: dict) -> List[Dict[str, Any]]:
     max_m = game_cfg["max_main"]
     clean_text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
     dates_found = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", clean_text)
-    all_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", re.sub(r"<[^>]+>", " ", clean_text))]
-    valid_nums = [n for n in all_nums if 1 <= n <= max_m]
+    text_plain = re.sub(r"<[^>]+>", " ", clean_text)
+
+    # Tìm các cụm >= pick_n số 1-2 chữ số liên tiếp cách nhau bởi khoảng trắng/dấu phẩy/gạch nối
+    cluster_pattern = re.compile(r"(?:\b\d{1,2}\b[\s,\-/|]+){" + str(pick_n - 1) + r",}\b\d{1,2}\b")
     draw_id = 9999
-    for i in range(0, len(valid_nums), pick_n):
-        seg = valid_nums[i : i + pick_n]
-        if len(seg) == pick_n:
+    for match in cluster_pattern.finditer(text_plain):
+        raw_nums = [int(x) for x in re.findall(r"\b\d{1,2}\b", match.group(0))]
+        unique_mains: List[int] = []
+        for n in raw_nums:
+            if 1 <= n <= max_m and n not in unique_mains:
+                unique_mains.append(n)
+                if len(unique_mains) == pick_n:
+                    break
+        if len(unique_mains) == pick_n:
             records.append({
                 "draw": draw_id,
                 "date": dates_found[len(records)] if len(records) < len(dates_found) else "",
-                "mains": sorted(seg),
+                "mains": sorted(unique_mains),
             })
             draw_id -= 1
+            if len(records) >= 25:
+                break
     return records
 
 
@@ -719,10 +807,15 @@ def get_history_with_diag(
     # Bước 1: Live Web (ưu tiên vietlott.vn -> minhngoc.net -> các nguồn dự phòng khác)
     live_fetched: List[Dict[str, Any]] = []
     active_source_url = ""
-    ordered_urls = [
-        game_cfg.get("vietlott_url"),
+    base_vn = str(game_cfg.get("vietlott_url") or game_cfg.get("url") or "").strip()
+    vn_variants = [
+        base_vn,
+        base_vn.rstrip("/") + "/",
+        "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/",
+        "https://vietlott.vn/",
+    ]
+    ordered_urls = [u for u in vn_variants if u] + [
         game_cfg.get("minhngoc_url"),
-        game_cfg.get("url"),
     ] + game_cfg.get("backups", [])
     for url in dict.fromkeys(u for u in ordered_urls if u):
         html, attempt_info = fetch_html_with_diag(url)
