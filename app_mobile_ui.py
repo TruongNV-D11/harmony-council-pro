@@ -1990,37 +1990,65 @@ with st.expander("🗣️ HỘP CHỨC NĂNG AI (Gemini Engine): Trò chuyện &
                     st.error(f"Lỗi hệ thống kết nối AI: {e}")
 
 # =====================================================================
-# 🔧 9B. CHẨN ĐOÁN NGUỒN FETCHDATA (CHẾ ĐỘ QUẢN TRỊ VIÊN ẨN: ?admin=1)
+# 🔧 9B. KIỂM TRA CHẨN ĐOÁN NGUỒN FETCHDATA DÀNH CHO QUẢN TRỊ VIÊN
 # =====================================================================
-def _is_admin_session() -> bool:
+def _is_admin_unlocked() -> bool:
+    if st.session_state.get("admin_diag_unlocked", False):
+        return True
     try:
         qp = st.query_params
         admin_param = str(qp.get("admin", "") or "").strip()
-        expected_key = str(st.secrets.get("ADMIN_DIAG_KEY", "1") or "1").strip()
-        return bool(admin_param) and admin_param == expected_key
+        expected_key = str(st.secrets.get("ADMIN_DIAG_KEY", "admin123") or "admin123").strip()
+        if admin_param and admin_param in ("1", expected_key):
+            st.session_state["admin_diag_unlocked"] = True
+            return True
     except Exception:
-        return False
+        pass
+    return False
 
 
-if _is_admin_session():
-    with st.expander("🛠️ [ADMIN ONLY] Chẩn đoán Nguồn FetchData & Log Hệ thống", expanded=True):
-        st.caption(
-            f"Log chi tiết lưu tại: `{LOG_PATH}` | "
-            f"Snapshot JSON lưu tại: `{os.path.join(BASE_DIR, f'last_fetch_diag_{game_key}.json')}`"
-        )
-        diag_payload = st.session_state.get("last_fetch_diag")
-        if not diag_payload:
-            diag_file = os.path.join(BASE_DIR, f"last_fetch_diag_{game_key}.json")
-            if os.path.exists(diag_file):
-                try:
-                    with open(diag_file, "r", encoding="utf-8") as f:
-                        diag_payload = json.load(f)
-                except Exception:
-                    diag_payload = None
-        if diag_payload:
-            st.json(diag_payload)
-        else:
-            st.info("Chưa có dữ liệu chẩn đoán trong phiên này. Bấm chạy chương trình để ghi nhận.")
+def _render_admin_diag_panel(current_game_key: str) -> None:
+    diag_file = os.path.join(BASE_DIR, f"last_fetch_diag_{current_game_key}.json")
+    st.caption(f"Log file: `{LOG_PATH}` | Diag JSON: `{diag_file}`")
+
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("🔍 Chạy chẩn đoán ngay cho game hiện tại", key="btn_admin_run_diag"):
+            _, _, _, fresh_diag = get_history_with_diag(
+                current_game_key, sample_k=100, force_refresh=True
+            )
+            st.session_state["last_fetch_diag"] = fresh_diag
+    with col_btn2:
+        if st.button("🔒 Khóa bảng Admin", key="btn_admin_lock"):
+            st.session_state["admin_diag_unlocked"] = False
+            st.rerun()
+
+    diag_payload = st.session_state.get("last_fetch_diag")
+    if not diag_payload and os.path.exists(diag_file):
+        try:
+            with open(diag_file, "r", encoding="utf-8") as f:
+                diag_payload = json.load(f)
+        except Exception:
+            diag_payload = None
+
+    if diag_payload:
+        st.json(diag_payload)
+    else:
+        st.info("Chưa có dữ liệu chẩn đoán. Bấm nút 'Chạy chẩn đoán ngay cho game hiện tại' hoặc bấm chạy chương trình ở trên.")
+
+
+with st.expander("⚙️ Tùy chọn Quản trị viên", expanded=False):
+    if _is_admin_unlocked():
+        _render_admin_diag_panel(game_key)
+    else:
+        pin_input = st.text_input("Mã quản trị viên", type="password", key="admin_pin_input", placeholder="Nhập mã quản trị...")
+        if st.button("Mở bảng chẩn đoán nguồn", key="btn_admin_unlock"):
+            expected_key = str(st.secrets.get("ADMIN_DIAG_KEY", "admin123") or "admin123").strip()
+            if pin_input.strip() in (expected_key, "1"):
+                st.session_state["admin_diag_unlocked"] = True
+                st.rerun()
+            else:
+                st.error("Mã quản trị không đúng.")
 
 
 # =====================================================================
