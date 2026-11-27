@@ -7,6 +7,7 @@ Thiết kế:
 - Chuẩn hóa chuỗi tiếng Việt có dấu / không dấu (`normalize_text`) để gợi ý câu hỏi tương đồng trong thư viện (`FAQ_DICT`).
 - Không dùng cơ chế bắt phím từng ký tự (tránh rerun liên tục và giữ ứng dụng nhẹ).
 - Ưu tiên trả lời tức thì từ kho câu hỏi có sẵn (`FAQ_DICT` + quy đổi đồng nghĩa); chỉ gọi AI fallback khi không khớp kho câu hỏi tĩnh.
+- Tự dọn/xóa phần code hộp trợ lý AI cũ nếu truyền chuỗi mã nguồn file chính (`strip_legacy_assistant_box`).
 - Theo dõi lượt sử dụng theo tháng lịch (`YYYY-MM`) gọn nhẹ trong `st.session_state`.
 """
 
@@ -16,7 +17,7 @@ from datetime import datetime
 import os
 import re
 import unicodedata
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 import streamlit as st
 
@@ -169,8 +170,9 @@ def resolve_canonical_question(
         if normalize_text(question) == norm_q:
             return question
 
-    if norm_q in {normalize_text(k): v for k, v in synonyms.items()}:
-        mapped = {normalize_text(k): v for k, v in synonyms.items()}[norm_q]
+    normalized_syn_map = {normalize_text(k): v for k, v in synonyms.items()}
+    if norm_q in normalized_syn_map:
+        mapped = normalized_syn_map[norm_q]
         if mapped in faq:
             return mapped
 
@@ -231,6 +233,29 @@ def default_ai_fallback(prompt: str) -> str:
     return "Không nhận được phản hồi từ dịch vụ AI."
 
 
+def strip_legacy_assistant_box(source_code: str) -> str:
+    """
+    Hỗ trợ gỡ khối hộp trợ lý AI cũ nếu cần làm sạch mã nguồn file giao diện chính.
+    Xóa đoạn expander/block chứa tiêu đề 'HỘP CHỨC NĂNG AI' nếu xuất hiện.
+    """
+    if not source_code:
+        return ""
+    pattern = re.compile(
+        r"^[ 	]*(?:with\s+st\.expander\([^
+]*HỘP CHỨC NĂNG AI[^
+]*\)\s*:\s*
+(?:(?:[ 	]+[^
+]*|\s*)
+)*)",
+        re.MULTILINE,
+    )
+    cleaned = pattern.sub("", source_code)
+    return re.sub(r"
+{3,}", "
+
+", cleaned)
+
+
 def _append_message(role: str, content: str, source_badge: Optional[str] = None) -> None:
     history: List[Dict[str, Any]] = st.session_state.setdefault(
         "harmony_assistant_messages", []
@@ -285,7 +310,9 @@ def render_assistant_widget(
         )
 
         # Gợi ý câu hỏi tương đồng theo chuỗi ký tự hiện có trong ô nhập
-        suggestions = find_matching_questions(user_query, faq_dict=faq, synonym_map=synonyms)
+        suggestions = find_matching_questions(
+            user_query, faq_dict=faq, synonym_map=synonyms
+        )
         if user_query.strip() and suggestions:
             st.markdown("**Gợi ý câu hỏi có sẵn trong thư viện (bấm chọn để trả lời ngay):**")
             for idx, q_item in enumerate(suggestions):
