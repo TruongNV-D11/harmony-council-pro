@@ -239,12 +239,24 @@ GAMES: Dict[str, Dict[str, Any]] = {
         "has_special": True,
         "special_max": 12,
         "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
+        "vietlott_endpoints": [
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535/",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/535/danh-sach-ky-quay.html",
+            "https://vietlott.vn/ajax/ket-qua-trung-thuong/535",
+        ],
         "minhngoc_url": "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/lotto-5x35.html",
+        "minhngoc_endpoints": [
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/lotto-5x35.html",
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/lotto-5x35.html?page=1",
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/lotto-5x35.html?page=2",
+            "https://www.minhngoc.com.vn/ket-qua-xo-so/dien-toan-vietlott/lotto-5x35.html",
+        ],
         "backups": [
             "https://www.minhngoc.com.vn/ket-qua-xo-so/dien-toan-vietlott/lotto-5x35.html",
             "https://xosominhngoc.com/ket-qua-xo-so/dien-toan-vietlott/lotto-5x35.html",
         ],
-        "github_jsonl": None,
+        "github_jsonl": "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power535.jsonl",
         "draw_days": [0, 1, 2, 3, 4, 5, 6],
         "draw_hours": [13, 21],
     },
@@ -254,7 +266,19 @@ GAMES: Dict[str, Dict[str, Any]] = {
         "max_main": 45,
         "has_special": False,
         "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
+        "vietlott_endpoints": [
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645/",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/645/danh-sach-ky-quay.html",
+            "https://vietlott.vn/ajax/ket-qua-trung-thuong/645",
+        ],
         "minhngoc_url": "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/mega-6x45.html",
+        "minhngoc_endpoints": [
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/mega-6x45.html",
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/mega-6x45.html?page=1",
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/mega-6x45.html?page=2",
+            "https://www.minhngoc.com.vn/ket-qua-xo-so/dien-toan-vietlott/mega-6x45.html",
+        ],
         "backups": [
             "https://www.minhngoc.com.vn/ket-qua-xo-so/dien-toan-vietlott/mega-6x45.html",
             "https://xosominhngoc.com/ket-qua-xo-so/dien-toan-vietlott/mega-6x45.html",
@@ -270,7 +294,19 @@ GAMES: Dict[str, Dict[str, Any]] = {
         "has_special": True,
         "special_max": 55,
         "vietlott_url": "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
+        "vietlott_endpoints": [
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655/",
+            "https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/655/danh-sach-ky-quay.html",
+            "https://vietlott.vn/ajax/ket-qua-trung-thuong/655",
+        ],
         "minhngoc_url": "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/power-6x55.html",
+        "minhngoc_endpoints": [
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/power-6x55.html",
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/power-6x55.html?page=1",
+            "https://www.minhngoc.net.vn/ket-qua-xo-so/dien-toan-vietlott/power-6x55.html?page=2",
+            "https://www.minhngoc.com.vn/ket-qua-xo-so/dien-toan-vietlott/power-6x55.html",
+        ],
         "backups": [
             "https://www.minhngoc.com.vn/ket-qua-xo-so/dien-toan-vietlott/power-6x55.html",
             "https://xosominhngoc.com/ket-qua-xo-so/dien-toan-vietlott/power-6x55.html",
@@ -281,7 +317,7 @@ GAMES: Dict[str, Dict[str, Any]] = {
     },
 }
 
-MAX_CACHE_RECORDS = 1000
+MAX_CACHE_RECORDS = 2000
 
 
 def get_next_draw_datetime(game_key: str) -> datetime:
@@ -443,7 +479,12 @@ def _merge_unique_history(
     return merged
 
 
-def fetch_html_with_diag(url: str, timeout: int = 15) -> Tuple[str, Dict[str, Any]]:
+def fetch_html_with_diag(
+    url: str,
+    timeout: int = 15,
+    referer: Optional[str] = None,
+    session: Optional[requests.Session] = None,
+) -> Tuple[str, Dict[str, Any]]:
     info: Dict[str, Any] = {
         "url": url,
         "status": None,
@@ -454,19 +495,25 @@ def fetch_html_with_diag(url: str, timeout: int = 15) -> Tuple[str, Dict[str, An
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/126.0.0.0 Safari/537.36"
+            "Chrome/128.0.0.0 Safari/537.36"
         ),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8",
         "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
         "Cache-Control": "no-cache",
     }
+    if referer:
+        headers["Referer"] = referer
+    client = session if session is not None else requests
     try:
-        resp = requests.get(url, headers=headers, timeout=timeout)
+        resp = client.get(url, headers=headers, timeout=timeout)
         info["status"] = resp.status_code
-        resp.encoding = resp.apparent_encoding or "utf-8"
+        if not resp.encoding or resp.encoding.lower() in ("iso-8859-1", "ascii"):
+            resp.encoding = resp.apparent_encoding or "utf-8"
         text = resp.text or ""
         info["bytes"] = len(text)
-        if resp.status_code == 200 and len(text) > 500:
+        if resp.status_code == 200 and len(text) > 300:
             return text, info
         info["error"] = f"HTTP_{resp.status_code}_short_or_blocked"
         return "", info
@@ -578,7 +625,7 @@ def parse_history_from_html(html: str, game_cfg: Dict[str, Any], source_url: str
         if is_655:
             pattern = r"\b(0[1-9]|[1-4]\d|5[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-4]\d|5[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-4]\d|5[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-4]\d|5[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-4]\d|5[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-4]\d|5[0-5])\b(?:[\s\-\|,;/\|]+(0[1-9]|[1-4]\d|5[0-5])\b)?"
         elif is_535:
-            pattern = r"\b(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/]+(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/]+(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/]+(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/]+(0[1-9]|[12]\d|3[0-5])\b(?:[\s\-\|,;/\|]+(0[1-9]|1[0-2])\b)?"
+            pattern = r"\b(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/]+(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/]+(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/]+(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/]+(0[1-9]|[12]\d|3[0-5])\b[\s\-\|,;/\|]+(0[1-9]|1[0-2])\b"
         else:
             pattern = r"\b(0[1-9]|[1-3]\d|4[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-3]\d|4[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-3]\d|4[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-3]\d|4[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-3]\d|4[0-5])\b[\s\-\|,;/]+(0[1-9]|[1-3]\d|4[0-5])\b"
 
@@ -592,12 +639,70 @@ def parse_history_from_html(html: str, game_cfg: Dict[str, Any], source_url: str
     return results[:MAX_CACHE_RECORDS]
 
 
+def _extract_nums_from_jsonl_obj(obj: Any, game_cfg: Dict[str, Any]) -> Tuple[List[int], Optional[int]]:
+    pick = game_cfg["pick"]
+    has_special = game_cfg.get("has_special", False)
+    if isinstance(obj, list):
+        nums = [int(x) for x in obj if isinstance(x, (int, float, str)) and str(x).strip().isdigit()]
+        mains = nums[:pick]
+        spec = int(nums[pick]) if has_special and len(nums) > pick else None
+        return mains, spec
+    if not isinstance(obj, dict):
+        return [], None
+
+    # Trường hợp tách riêng số chính và số đặc biệt
+    raw_mains = (
+        obj.get("mains")
+        or obj.get("main_numbers")
+        or obj.get("balls")
+        or obj.get("win_numbers")
+        or obj.get("winning_numbers")
+    )
+    raw_spec = (
+        obj.get("special")
+        if obj.get("special") is not None
+        else (
+            obj.get("special_number")
+            if obj.get("special_number") is not None
+            else (obj.get("bonus") if obj.get("bonus") is not None else obj.get("db"))
+        )
+    )
+
+    if isinstance(raw_mains, list):
+        mains = [int(x) for x in raw_mains if str(x).strip().isdigit()][:pick]
+        spec: Optional[int] = None
+        if has_special and raw_spec is not None and str(raw_spec).strip().isdigit():
+            spec = int(raw_spec)
+        return mains, spec
+
+    # Trường hợp gộp chung vào một danh sách hoặc chuỗi
+    raw_combined = obj.get("result") or obj.get("numbers") or obj.get("value") or ""
+    if isinstance(raw_combined, str):
+        tokens = re.findall(r"\d{1,2}", raw_combined)
+        nums = [int(t) for t in tokens]
+    elif isinstance(raw_combined, list):
+        nums = [int(x) for x in raw_combined if str(x).strip().isdigit()]
+    else:
+        nums = []
+
+    mains = nums[:pick]
+    spec = None
+    if has_special:
+        if raw_spec is not None and str(raw_spec).strip().isdigit():
+            spec = int(raw_spec)
+        elif len(nums) > pick:
+            spec = int(nums[pick])
+    return mains, spec
+
+
 def fetch_github_seed_data(
     jsonl_url: Optional[str],
     game_cfg: Dict[str, Any],
     diag: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     if not jsonl_url:
+        if diag is not None and diag.get("github_status") is None:
+            diag["github_status"] = "no_url"
         return []
     try:
         resp = requests.get(jsonl_url, timeout=15)
@@ -612,19 +717,19 @@ def fetch_github_seed_data(
         for line in reversed(lines):
             try:
                 obj = json.loads(line)
-                raw_nums = obj.get("result") or obj.get("numbers") or obj.get("mains") or []
-                nums = [int(x) for x in raw_nums]
-                if len(nums) >= game_cfg["pick"]:
-                    mains = nums[: game_cfg["pick"]]
-                    spec = (
-                        nums[game_cfg["pick"]]
-                        if game_cfg.get("has_special", False) and len(nums) > game_cfg["pick"]
-                        else None
-                    )
+                mains, spec = _extract_nums_from_jsonl_obj(obj, game_cfg)
+                if len(mains) == game_cfg["pick"]:
+                    draw_id = ""
+                    date_str = ""
+                    slot_str = ""
+                    if isinstance(obj, dict):
+                        draw_id = str(obj.get("id") or obj.get("draw_id") or obj.get("period") or "").strip()
+                        date_str = str(obj.get("date") or obj.get("draw_date") or "").strip()
+                        slot_str = str(obj.get("slot") or obj.get("session") or obj.get("time") or "").strip()
                     rec = {
-                        "draw_id": str(obj.get("id", "") or obj.get("draw_id", "")),
-                        "date": str(obj.get("date", "")),
-                        "slot": "",
+                        "draw_id": draw_id,
+                        "date": date_str,
+                        "slot": slot_str,
                         "mains": sorted(mains),
                         "special": spec,
                     }
@@ -634,9 +739,12 @@ def fetch_github_seed_data(
                     break
             except Exception:
                 continue
+        if diag is not None and not parsed and lines:
+            diag["github_error"] = "parsed_0_records_from_jsonl"
         return parsed
     except Exception as e:
         if diag is not None:
+            diag["github_status"] = "error"
             diag["github_error"] = f"{type(e).__name__}: {str(e)[:120]}"
         return []
 
@@ -701,37 +809,124 @@ def get_history_with_diag(
         _atomic_write_json(os.path.join(BASE_DIR, f"last_fetch_diag_{game_key}.json"), diag)
         return existing_cache[:sample_k], status, cache_age, diag
 
+    vietlott_fetched: List[Dict[str, Any]] = []
+    minhngoc_fetched: List[Dict[str, Any]] = []
     live_fetched: List[Dict[str, Any]] = []
-    active_source_url = ""
-    base_vn = str(game_cfg.get("vietlott_url") or game_cfg.get("url") or "").strip()
-    vn_variants = [base_vn, base_vn.rstrip("/") + "/"]
-    ordered_urls = [u for u in vn_variants if u] + [game_cfg.get("minhngoc_url")] + game_cfg.get("backups", [])
-    for url in dict.fromkeys(u for u in ordered_urls if u):
-        html, attempt_info = fetch_html_with_diag(url)
-        raw_parsed = parse_history_from_html(html, game_cfg, source_url=url)
-        valid_parsed = [
-            _normalize_record(
-                r,
-                game_cfg,
-                fallback_date=expected_slot_date.strftime("%Y-%m-%d") if idx == 0 else "",
-                fallback_slot=expected_slot_time if idx == 0 else "",
-                game_key=game_key,
-            )
-            for idx, r in enumerate(raw_parsed)
-            if is_valid_record(r, game_cfg)
-        ]
-        attempt_info["raw_parsed"] = len(raw_parsed)
-        attempt_info["valid_parsed"] = len(valid_parsed)
-        diag["live_attempts"].append(attempt_info)
-        logger.info(
-            f"[{game_key}] Live {url} -> status={attempt_info['status']}, "
-            f"bytes={attempt_info['bytes']}, raw={len(raw_parsed)}, valid={len(valid_parsed)}, err={attempt_info['error']}"
-        )
-        if len(valid_parsed) >= 1:
-            live_fetched = valid_parsed
-            active_source_url = url.split("/")[2]
-            break
+    active_sources: List[str] = []
 
+    base_vn = str(game_cfg.get("vietlott_url") or game_cfg.get("url") or "").strip()
+    vn_urls = list(game_cfg.get("vietlott_endpoints") or [])
+    if base_vn:
+        vn_urls = [base_vn, base_vn.rstrip("/") + "/"] + vn_urls
+    vn_urls = list(dict.fromkeys(u for u in vn_urls if u))
+
+    mn_primary = str(game_cfg.get("minhngoc_url") or "").strip()
+    mn_urls = list(game_cfg.get("minhngoc_endpoints") or [])
+    if mn_primary:
+        mn_urls = [mn_primary] + mn_urls
+    mn_urls = list(dict.fromkeys(u for u in mn_urls if u))
+
+    backup_urls = list(dict.fromkeys(u for u in (game_cfg.get("backups") or []) if u and u not in mn_urls))
+
+    http_session = requests.Session()
+    try:
+        # 1. Nguồn chính thứ 1: vietlott.vn
+        for u_idx, url in enumerate(vn_urls):
+            ref = "https://vietlott.vn/" if u_idx > 0 else None
+            html, attempt_info = fetch_html_with_diag(url, referer=ref, session=http_session)
+            raw_parsed = parse_history_from_html(html, game_cfg, source_url=url)
+            valid_parsed = [
+                _normalize_record(
+                    r,
+                    game_cfg,
+                    fallback_date=expected_slot_date.strftime("%Y-%m-%d") if idx == 0 else "",
+                    fallback_slot=expected_slot_time if idx == 0 else "",
+                    game_key=game_key,
+                )
+                for idx, r in enumerate(raw_parsed)
+                if is_valid_record(r, game_cfg)
+            ]
+            attempt_info["source_group"] = "vietlott.vn"
+            attempt_info["raw_parsed"] = len(raw_parsed)
+            attempt_info["valid_parsed"] = len(valid_parsed)
+            diag["live_attempts"].append(attempt_info)
+            logger.info(
+                f"[{game_key}] Vietlott {url} -> status={attempt_info['status']}, "
+                f"bytes={attempt_info['bytes']}, raw={len(raw_parsed)}, valid={len(valid_parsed)}, err={attempt_info['error']}"
+            )
+            if valid_parsed:
+                vietlott_fetched = _merge_unique_history(
+                    vietlott_fetched, valid_parsed, game_cfg, MAX_CACHE_RECORDS, game_key=game_key
+                )
+                if "vietlott.vn" not in active_sources:
+                    active_sources.append("vietlott.vn")
+                if len(vietlott_fetched) >= sample_k:
+                    break
+
+        # 2. Nguồn chính thứ 2: minhngoc.net (luôn cào để hợp nhất & bù kỳ còn thiếu thay vì dừng sớm)
+        for u_idx, url in enumerate(mn_urls):
+            ref = mn_urls[0] if u_idx > 0 else "https://www.minhngoc.net.vn/"
+            html, attempt_info = fetch_html_with_diag(url, referer=ref, session=http_session)
+            raw_parsed = parse_history_from_html(html, game_cfg, source_url=url)
+            valid_parsed = [
+                _normalize_record(
+                    r,
+                    game_cfg,
+                    fallback_date=expected_slot_date.strftime("%Y-%m-%d") if (idx == 0 and not vietlott_fetched) else "",
+                    fallback_slot=expected_slot_time if (idx == 0 and not vietlott_fetched) else "",
+                    game_key=game_key,
+                )
+                for idx, r in enumerate(raw_parsed)
+                if is_valid_record(r, game_cfg)
+            ]
+            attempt_info["source_group"] = "minhngoc.net"
+            attempt_info["raw_parsed"] = len(raw_parsed)
+            attempt_info["valid_parsed"] = len(valid_parsed)
+            diag["live_attempts"].append(attempt_info)
+            logger.info(
+                f"[{game_key}] MinhNgoc {url} -> status={attempt_info['status']}, "
+                f"bytes={attempt_info['bytes']}, raw={len(raw_parsed)}, valid={len(valid_parsed)}, err={attempt_info['error']}"
+            )
+            if valid_parsed:
+                minhngoc_fetched = _merge_unique_history(
+                    minhngoc_fetched, valid_parsed, game_cfg, MAX_CACHE_RECORDS, game_key=game_key
+                )
+                if "minhngoc.net" not in active_sources:
+                    active_sources.append("minhngoc.net")
+
+        live_fetched = _merge_unique_history(
+            vietlott_fetched, minhngoc_fetched, game_cfg, MAX_CACHE_RECORDS, game_key=game_key
+        )
+
+        # 3. Các mirror phụ của Minh Ngọc nếu cả 2 nguồn chính chưa đủ mẫu
+        if len(live_fetched) < sample_k and backup_urls:
+            for url in backup_urls:
+                html, attempt_info = fetch_html_with_diag(url, referer="https://www.minhngoc.net.vn/", session=http_session)
+                raw_parsed = parse_history_from_html(html, game_cfg, source_url=url)
+                valid_parsed = [
+                    _normalize_record(r, game_cfg, game_key=game_key)
+                    for r in raw_parsed
+                    if is_valid_record(r, game_cfg)
+                ]
+                attempt_info["source_group"] = "minhngoc_mirror"
+                attempt_info["raw_parsed"] = len(raw_parsed)
+                attempt_info["valid_parsed"] = len(valid_parsed)
+                diag["live_attempts"].append(attempt_info)
+                if valid_parsed:
+                    live_fetched = _merge_unique_history(
+                        live_fetched, valid_parsed, game_cfg, MAX_CACHE_RECORDS, game_key=game_key
+                    )
+                    host_tag = url.split("/")[2]
+                    if host_tag not in active_sources:
+                        active_sources.append(host_tag)
+                    if len(live_fetched) >= sample_k:
+                        break
+    finally:
+        http_session.close()
+
+    active_source_url = " + ".join(active_sources)
+    diag["vietlott_valid_count"] = len(vietlott_fetched)
+    diag["minhngoc_valid_count"] = len(minhngoc_fetched)
     diag["live_valid_count"] = len(live_fetched)
 
     github_seed: List[Dict[str, Any]] = []
